@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from pydantic import EmailStr
 from sqlalchemy import DateTime
@@ -112,10 +113,95 @@ class ItemsPublic(SQLModel):
     count: int
 
 
+# -------------------------
+# OpsPilot Product models
+# -------------------------
+
+
+class ProductBase(SQLModel):
+    name: str = Field(
+        min_length=1,
+        max_length=255,
+        index=True,
+    )
+
+    category: str = Field(
+        min_length=1,
+        max_length=100,
+        index=True,
+    )
+
+    selling_price: Decimal = Field(
+        ge=0,
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    unit: str = Field(
+        min_length=1,
+        max_length=50,
+    )
+
+    is_active: bool = True
+
+
+class ProductCreate(ProductBase):
+    pass
+
+
+class ProductUpdate(SQLModel):
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+    )
+
+    category: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+    )
+
+    selling_price: Decimal | None = Field(
+        default=None,
+        ge=0,
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    unit: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=50,
+    )
+
+    is_active: bool | None = None
+
+
+class Product(ProductBase, table=True):
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+    )
+
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class ProductPublic(ProductBase):
+    id: uuid.UUID
+    created_at: datetime
+
+
+class ProductsPublic(SQLModel):
+    data: list[ProductPublic]
+    count: int
+ 
 # Generic message
 class Message(SQLModel):
     message: str
-
 
 # JSON payload containing access token
 class Token(SQLModel):
