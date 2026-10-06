@@ -1,5 +1,6 @@
 import warnings
 from typing import Literal, Self
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import (
     EmailStr,
@@ -25,10 +26,20 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://localhost:5173"
     FASTAPI_ENV: Literal["development"] | None = None
+    BUSINESS_TIMEZONE: str = "Australia/Sydney"
 
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
     DATABASE_URL: PostgresDsn
+
+    @field_validator("BUSINESS_TIMEZONE")
+    @classmethod
+    def _validate_business_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError("BUSINESS_TIMEZONE must be a valid IANA timezone") from error
+        return value
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

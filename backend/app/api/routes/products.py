@@ -5,12 +5,14 @@ from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    InventoryMovement,
     Message,
     Product,
     ProductCreate,
     ProductPublic,
     ProductsPublic,
     ProductUpdate,
+    SaleItem,
 )
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -58,6 +60,7 @@ def read_products(
         data=products,
         count=count,
     )
+
 
 @router.get("/{product_id}", response_model=ProductPublic)
 def read_product(
@@ -122,6 +125,26 @@ def delete_product(
 
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    sale_item_id = session.exec(
+        select(SaleItem.id).where(SaleItem.product_id == product_id).limit(1)
+    ).first()
+    if sale_item_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Product has sales history and cannot be deleted",
+        )
+
+    movement_id = session.exec(
+        select(InventoryMovement.id)
+        .where(InventoryMovement.product_id == product_id)
+        .limit(1)
+    ).first()
+    if movement_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Product has inventory history and cannot be deleted",
+        )
 
     session.delete(product)
     session.commit()

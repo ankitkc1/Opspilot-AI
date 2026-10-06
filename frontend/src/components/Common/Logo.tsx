@@ -1,11 +1,8 @@
 import { Link } from "@tanstack/react-router"
+import { Gauge } from "lucide-react"
+import type { ReactNode } from "react"
 
-import { useTheme } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
-import icon from "/assets/images/fastapi-icon.svg"
-import iconLight from "/assets/images/fastapi-icon-light.svg"
-import logo from "/assets/images/fastapi-logo.svg"
-import logoLight from "/assets/images/fastapi-logo-light.svg"
 
 interface LogoProps {
   variant?: "full" | "icon" | "responsive"
@@ -18,43 +15,51 @@ export function Logo({
   className,
   asLink = true,
 }: LogoProps) {
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
+  const mark = (
+    <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+      <Gauge className="size-4" />
+    </span>
+  )
+  const wordmark = (
+    <span className="text-lg font-semibold tracking-tight">OpsPilot</span>
+  )
 
-  const fullLogo = isDark ? logoLight : logo
-  const iconLogo = isDark ? iconLight : icon
-
-  const content =
-    variant === "responsive" ? (
+  let content: ReactNode
+  if (variant === "responsive") {
+    content = (
       <>
-        <img
-          src={fullLogo}
-          alt="FastAPI"
+        <span
           className={cn(
-            "h-6 w-auto group-data-[collapsible=icon]:hidden",
+            "flex items-center gap-2.5 group-data-[collapsible=icon]:hidden",
             className,
           )}
-        />
-        <img
-          src={iconLogo}
-          alt="FastAPI"
-          className={cn(
-            "size-5 hidden group-data-[collapsible=icon]:block",
-            className,
-          )}
-        />
+        >
+          {mark}
+          {wordmark}
+        </span>
+        <span className="hidden group-data-[collapsible=icon]:block">
+          {mark}
+        </span>
       </>
-    ) : (
-      <img
-        src={variant === "full" ? fullLogo : iconLogo}
-        alt="FastAPI"
-        className={cn(variant === "full" ? "h-6 w-auto" : "size-5", className)}
-      />
     )
+  } else if (variant === "icon") {
+    content = <span className={className}>{mark}</span>
+  } else {
+    content = (
+      <span className={cn("flex items-center gap-2.5", className)}>
+        {mark}
+        {wordmark}
+      </span>
+    )
+  }
 
   if (!asLink) {
     return content
   }
 
-  return <Link to="/">{content}</Link>
+  return (
+    <Link to="/" aria-label="OpsPilot dashboard">
+      {content}
+    </Link>
+  )
 }
