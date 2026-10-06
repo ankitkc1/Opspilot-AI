@@ -199,9 +199,114 @@ class ProductsPublic(SQLModel):
     data: list[ProductPublic]
     count: int
 
+
+# -------------------------
+# OpsPilot Sales models
+# -------------------------
+
+
+class SaleItemCreate(SQLModel):
+    product_id: uuid.UUID
+    quantity: Decimal = Field(
+        gt=0,
+        max_digits=10,
+        decimal_places=3,
+    )
+
+
+class SaleCreate(SQLModel):
+    sold_at: datetime = Field(default_factory=get_datetime_utc)
+    items: list[SaleItemCreate] = Field(min_length=1)
+
+
+class SaleBase(SQLModel):
+    sold_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+        index=True,
+    )
+    total_amount: Decimal = Field(
+        ge=0,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+
+class Sale(SaleBase, table=True):
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+    )
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    items: list[SaleItem] = Relationship(
+        back_populates="sale",
+        cascade_delete=True,
+    )
+
+
+class SaleItemBase(SQLModel):
+    product_id: uuid.UUID
+    quantity: Decimal = Field(
+        gt=0,
+        max_digits=10,
+        decimal_places=3,
+    )
+    unit_price: Decimal = Field(
+        ge=0,
+        max_digits=10,
+        decimal_places=2,
+    )
+    line_total: Decimal = Field(
+        ge=0,
+        max_digits=12,
+        decimal_places=2,
+    )
+
+
+class SaleItem(SaleItemBase, table=True):
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+    )
+    sale_id: uuid.UUID = Field(
+        foreign_key="sale.id",
+        nullable=False,
+        ondelete="CASCADE",
+        index=True,
+    )
+    product_id: uuid.UUID = Field(
+        foreign_key="product.id",
+        nullable=False,
+        ondelete="RESTRICT",
+        index=True,
+    )
+    sale: Sale | None = Relationship(back_populates="items")
+    product: Product | None = Relationship()
+
+
+class SaleItemPublic(SaleItemBase):
+    id: uuid.UUID
+    sale_id: uuid.UUID
+
+
+class SalePublic(SaleBase):
+    id: uuid.UUID
+    created_at: datetime
+    items: list[SaleItemPublic]
+
+
+class SalesPublic(SQLModel):
+    data: list[SalePublic]
+    count: int
+
+
 # Generic message
 class Message(SQLModel):
     message: str
+
 
 # JSON payload containing access token
 class Token(SQLModel):
