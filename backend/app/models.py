@@ -198,7 +198,7 @@ class ProductPublic(ProductBase):
 class ProductsPublic(SQLModel):
     data: list[ProductPublic]
     count: int
- 
+
 # Generic message
 class Message(SQLModel):
     message: str

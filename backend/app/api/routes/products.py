@@ -20,7 +20,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 def create_product(
     *,
     session: SessionDep,
-    current_user: CurrentUser,
+    _current_user: CurrentUser,
     product_in: ProductCreate,
 ) -> Product:
     """
@@ -39,7 +39,7 @@ def create_product(
 @router.get("/", response_model=ProductsPublic)
 def read_products(
     session: SessionDep,
-    current_user: CurrentUser,
+    _current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
 ) -> ProductsPublic:
@@ -62,7 +62,7 @@ def read_products(
 @router.get("/{product_id}", response_model=ProductPublic)
 def read_product(
     session: SessionDep,
-    current_user: CurrentUser,
+    _current_user: CurrentUser,
     product_id: uuid.UUID,
 ) -> Product:
     """
@@ -81,7 +81,7 @@ def read_product(
 def update_product(
     *,
     session: SessionDep,
-    current_user: CurrentUser,
+    _current_user: CurrentUser,
     product_id: uuid.UUID,
     product_in: ProductUpdate,
 ) -> Product:
@@ -111,7 +111,7 @@ def update_product(
 @router.delete("/{product_id}")
 def delete_product(
     session: SessionDep,
-    current_user: CurrentUser,
+    _current_user: CurrentUser,
     product_id: uuid.UUID,
 ) -> Message:
     """
