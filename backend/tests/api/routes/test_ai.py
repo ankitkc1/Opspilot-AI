@@ -1,4 +1,6 @@
-from typing import cast
+import json
+from collections.abc import Sequence
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 from httpx import Response
@@ -6,7 +8,7 @@ from httpx import Response
 from app.api.routes.ai import get_ollama_client
 from app.core.config import settings
 from app.main import app
-from app.services.ollama import OllamaClient, OllamaServiceError
+from app.services.ollama import OllamaClient, OllamaMessage, OllamaServiceError
 
 
 class StubOllamaClient(OllamaClient):
@@ -16,15 +18,35 @@ class StubOllamaClient(OllamaClient):
         model: str = "qwen3:4b",
         available_models: list[str] | None = None,
         error: OllamaServiceError | None = None,
+        chat_response: str | None = None,
+        chat_error: OllamaServiceError | None = None,
     ) -> None:
         self.model = model
         self.available_models = available_models or []
         self.error = error
+        self.chat_response = chat_response
+        self.chat_error = chat_error
+        self.last_messages: Sequence[OllamaMessage] | None = None
+        self.last_response_format: str | dict[str, Any] | None = None
 
     def list_models(self) -> list[str]:
         if self.error is not None:
             raise self.error
         return self.available_models
+
+    def chat(
+        self,
+        *,
+        messages: Sequence[OllamaMessage],
+        response_format: str | dict[str, Any] | None = None,
+    ) -> str:
+        self.last_messages = messages
+        self.last_response_format = response_format
+        if self.chat_error is not None:
+            raise self.chat_error
+        if self.chat_response is None:
+            raise AssertionError("A chat response was not configured")
+        return self.chat_response
 
 
 def _request_status(
@@ -44,6 +66,33 @@ def _request_status(
             client.get(
                 f"{settings.API_V1_STR}/ai/status",
                 headers=headers,
+            ),
+        )
+    finally:
+        if previous_override is None:
+            app.dependency_overrides.pop(get_ollama_client, None)
+        else:
+            app.dependency_overrides[get_ollama_client] = previous_override
+
+
+def _request_briefing(
+    client: TestClient,
+    headers: dict[str, str],
+    ollama: StubOllamaClient,
+) -> Response:
+    previous_override = app.dependency_overrides.get(get_ollama_client)
+
+    def override() -> OllamaClient:
+        return ollama
+
+    app.dependency_overrides[get_ollama_client] = override
+    try:
+        return cast(
+            Response,
+            client.post(
+                f"{settings.API_V1_STR}/ai/daily-briefing",
+                headers=headers,
+                params={"report_date": "2099-01-01"},
             ),
         )
     finally:
@@ -114,3 +163,74 @@ def test_ai_status_reports_unavailable_provider(
         "available_models": [],
         "message": "Ollama is not reachable from the backend.",
     }
+
+
+def test_daily_briefing_requires_authentication(client: TestClient) -> None:
+    response = client.post(f"{settings.API_V1_STR}/ai/daily-briefing")
+    assert response.status_code == 401
+
+
+def test_daily_briefing_is_grounded_in_dashboard_snapshot(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    ollama = StubOllamaClient(
+        chat_response=json.dumps(
+            {
+                "headline": "Quiet day: focus on stock readiness",
+                "summary": "No sales were recorded for the selected day.",
+                "priorities": ["Review the current low-stock list."],
+                "risks": ["There is not enough sales data to identify trends."],
+                "opportunities": ["Confirm products are ready for the next service."],
+            }
+        )
+    )
+
+    response = _request_briefing(client, superuser_token_headers, ollama)
+
+    assert response.status_code == 200
+    content = response.json()
+    assert content["report_date"] == "2099-01-01"
+    assert content["model"] == "qwen3:4b"
+    assert content["headline"] == "Quiet day: focus on stock readiness"
+    assert content["source"]["sales_count"] == 0
+    assert content["source"]["revenue"] == "0.00"
+    assert content["generated_at"]
+
+    assert isinstance(ollama.last_response_format, dict)
+    assert ollama.last_response_format["type"] == "object"
+    assert ollama.last_messages is not None
+    assert "untrusted business data" in ollama.last_messages[0]["content"]
+    assert '"report_date":"2099-01-01"' in ollama.last_messages[1]["content"]
+
+
+def test_daily_briefing_reports_unavailable_ollama(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    response = _request_briefing(
+        client,
+        superuser_token_headers,
+        StubOllamaClient(chat_error=OllamaServiceError("offline")),
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Local AI is unavailable. Check Ollama and the configured model."
+    )
+
+
+def test_daily_briefing_rejects_invalid_model_output(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    response = _request_briefing(
+        client,
+        superuser_token_headers,
+        StubOllamaClient(chat_response="not JSON"),
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == (
+        "Local AI returned a briefing in an invalid format."
+    )

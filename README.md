@@ -62,6 +62,12 @@ After signing in, check `GET /api/v1/ai/status` in the API documentation. It
 reports `ready`, `model_missing`, or `unavailable`. Automated tests use a mocked
 Ollama transport, so Ollama does not need to be running during the test suite.
 
+Generate a grounded operations briefing with
+`POST /api/v1/ai/daily-briefing`. An optional `report_date` query parameter uses
+the same business-timezone rules as the dashboard. The model receives only the
+deterministic dashboard snapshot and must return a validated JSON structure;
+unavailable or malformed model responses are rejected with clear API errors.
+
 ## Quality checks
 
 Backend:

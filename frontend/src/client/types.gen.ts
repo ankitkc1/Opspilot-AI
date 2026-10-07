@@ -5,6 +5,45 @@ export type ClientOptions = {
 };
 
 /**
+ * AIDailyBriefingPublic
+ */
+export type AIDailyBriefingPublic = {
+    /**
+     * Headline
+     */
+    headline: string;
+    /**
+     * Summary
+     */
+    summary: string;
+    /**
+     * Priorities
+     */
+    priorities: Array<string>;
+    /**
+     * Risks
+     */
+    risks: Array<string>;
+    /**
+     * Opportunities
+     */
+    opportunities: Array<string>;
+    /**
+     * Report Date
+     */
+    report_date: string;
+    /**
+     * Generated At
+     */
+    generated_at?: string;
+    /**
+     * Model
+     */
+    model: string;
+    source: DashboardSummaryPublic;
+};
+
+/**
  * AIStatusPublic
  */
 export type AIStatusPublic = {
@@ -1161,6 +1200,36 @@ export type aiReadAiStatusResponses = {
 };
 
 export type aiReadAiStatusResponse = aiReadAiStatusResponses[keyof aiReadAiStatusResponses];
+
+export type aiCreateDailyBriefingData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Report Date
+         */
+        report_date?: string | null;
+    };
+    url: '/api/v1/ai/daily-briefing';
+};
+
+export type aiCreateDailyBriefingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type aiCreateDailyBriefingError = aiCreateDailyBriefingErrors[keyof aiCreateDailyBriefingErrors];
+
+export type aiCreateDailyBriefingResponses = {
+    /**
+     * Successful Response
+     */
+    200: AIDailyBriefingPublic;
+};
+
+export type aiCreateDailyBriefingResponse = aiCreateDailyBriefingResponses[keyof aiCreateDailyBriefingResponses];
 
 export type productsReadProductsData = {
     body?: never;

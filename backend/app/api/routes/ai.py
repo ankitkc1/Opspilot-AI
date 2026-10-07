@@ -1,9 +1,15 @@
+from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import CurrentUser
-from app.models import AIStatusPublic
+from app.api.deps import CurrentUser, SessionDep
+from app.models import AIDailyBriefingPublic, AIStatusPublic
+from app.services.ai_briefing import (
+    AIBriefingResponseError,
+    generate_daily_briefing,
+)
+from app.services.dashboard import get_dashboard_summary
 from app.services.ollama import OllamaClient, OllamaServiceError
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -47,3 +53,27 @@ def read_ai_status(
         available_models=available_models,
         message="Local AI is ready.",
     )
+
+
+@router.post("/daily-briefing", response_model=AIDailyBriefingPublic)
+def create_daily_briefing(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    ollama: OllamaClientDep,
+    report_date: date | None = None,
+) -> AIDailyBriefingPublic:
+    """Generate a grounded briefing from OpsPilot's deterministic daily metrics."""
+
+    source = get_dashboard_summary(session, report_date=report_date)
+    try:
+        return generate_daily_briefing(ollama, source)
+    except OllamaServiceError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Local AI is unavailable. Check Ollama and the configured model.",
+        )
+    except AIBriefingResponseError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Local AI returned a briefing in an invalid format.",
+        )

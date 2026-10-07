@@ -435,6 +435,21 @@ class AIStatusPublic(SQLModel):
     message: str
 
 
+class AIDailyBriefingContent(SQLModel):
+    headline: str = Field(min_length=1, max_length=120)
+    summary: str = Field(min_length=1, max_length=600)
+    priorities: list[str] = Field(min_length=1, max_length=3)
+    risks: list[str] = Field(max_length=3)
+    opportunities: list[str] = Field(max_length=3)
+
+
+class AIDailyBriefingPublic(AIDailyBriefingContent):
+    report_date: date
+    generated_at: datetime = Field(default_factory=get_datetime_utc)
+    model: str
+    source: DashboardSummaryPublic
+
+
 # Generic message
 class Message(SQLModel):
     message: str
