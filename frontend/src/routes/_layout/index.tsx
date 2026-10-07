@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react"
 import {
   AlertCircle,
   CalendarDays,
+  CircleCheck,
   DollarSign,
   Lightbulb,
   ListChecks,
@@ -218,6 +219,7 @@ type BriefingListProps = {
   emptyMessage: string
   icon: LucideIcon
   iconClassName: string
+  isAdded: (item: string) => boolean
   isCreating: (item: string) => boolean
   onCreateAction: (item: string) => void
 }
@@ -228,6 +230,7 @@ function BriefingList({
   emptyMessage,
   icon: Icon,
   iconClassName,
+  isAdded,
   isCreating,
   onCreateAction,
 }: BriefingListProps) {
@@ -247,15 +250,17 @@ function BriefingList({
                 className="-mr-2 -mt-1 shrink-0"
                 size="sm"
                 variant="ghost"
-                disabled={isCreating(item)}
+                disabled={isAdded(item) || isCreating(item)}
                 onClick={() => onCreateAction(item)}
               >
-                {isCreating(item) ? (
+                {isAdded(item) ? (
+                  <CircleCheck />
+                ) : isCreating(item) ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
                   <Plus />
                 )}
-                Add
+                {isAdded(item) ? "Added" : "Add"}
               </Button>
             </li>
           ))}
@@ -273,6 +278,7 @@ type DailyBriefingProps = {
   isGenerating: boolean
   isLoading: boolean
   isStale: boolean
+  addedSuggestions: Set<string>
   onGenerate: () => void
   creatingAction?: ActionItemCreate
   onCreateAction: (
@@ -287,6 +293,7 @@ function DailyBriefing({
   isGenerating,
   isLoading,
   isStale,
+  addedSuggestions,
   onGenerate,
   creatingAction,
   onCreateAction,
@@ -391,6 +398,7 @@ function DailyBriefing({
                 emptyMessage="No immediate priorities identified."
                 icon={ListChecks}
                 iconClassName="text-sky-600 dark:text-sky-400"
+                isAdded={(item) => addedSuggestions.has(`priority:${item}`)}
                 isCreating={(item) => creatingAction?.title === item}
                 onCreateAction={(item) => onCreateAction(item, "priority")}
               />
@@ -400,6 +408,7 @@ function DailyBriefing({
                 emptyMessage="No specific risks identified."
                 icon={ShieldAlert}
                 iconClassName="text-rose-600 dark:text-rose-400"
+                isAdded={(item) => addedSuggestions.has(`risk:${item}`)}
                 isCreating={(item) => creatingAction?.title === item}
                 onCreateAction={(item) => onCreateAction(item, "risk")}
               />
@@ -409,6 +418,7 @@ function DailyBriefing({
                 emptyMessage="No specific opportunities identified."
                 icon={Lightbulb}
                 iconClassName="text-amber-600 dark:text-amber-400"
+                isAdded={(item) => addedSuggestions.has(`opportunity:${item}`)}
                 isCreating={(item) => creatingAction?.title === item}
                 onCreateAction={(item) => onCreateAction(item, "opportunity")}
               />
@@ -482,6 +492,26 @@ function Dashboard() {
       )
     },
   })
+  const generatedBriefing =
+    briefingMutation.data?.report_date === reportDate
+      ? briefingMutation.data
+      : undefined
+  const briefing = generatedBriefing ?? latestBriefingQuery.data ?? undefined
+  const briefingActionsQuery = useQuery({
+    queryKey: ["actions", "briefing", briefing?.id],
+    queryFn: async () => {
+      if (!briefing) return []
+      const response = await ActionsService.readActions({
+        query: {
+          source_briefing_id: briefing.id,
+          skip: 0,
+          limit: 100,
+        },
+      })
+      return response.data.data
+    },
+    enabled: Boolean(briefing),
+  })
   const createActionMutation = useMutation({
     mutationFn: async (payload: ActionItemCreate) => {
       const response = await ActionsService.createAction({ body: payload })
@@ -494,17 +524,19 @@ function Dashboard() {
       })
     },
     onError: (actionError) => {
-      toast.error("Action not created", {
+      const isDuplicate =
+        isAxiosError(actionError) && actionError.response?.status === 409
+      toast.error(isDuplicate ? "Action already added" : "Action not created", {
         description: getBriefingError(actionError),
       })
     },
   })
-
-  const generatedBriefing =
-    briefingMutation.data?.report_date === reportDate
-      ? briefingMutation.data
-      : undefined
-  const briefing = generatedBriefing ?? latestBriefingQuery.data ?? undefined
+  const addedSuggestions = new Set(
+    (briefingActionsQuery.data ?? []).map(
+      (action) =>
+        `${action.category}:${action.source_suggestion ?? action.title}`,
+    ),
+  )
   const isBriefingStale = Boolean(
     briefing &&
       data &&
@@ -630,6 +662,7 @@ function Dashboard() {
 
           <DailyBriefing
             briefing={briefing}
+            addedSuggestions={addedSuggestions}
             creatingAction={
               createActionMutation.isPending
                 ? createActionMutation.variables
@@ -653,6 +686,7 @@ function Dashboard() {
                 category,
                 priority,
                 source_briefing_id: briefing.id,
+                source_suggestion: title,
               })
             }}
           />

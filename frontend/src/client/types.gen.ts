@@ -119,6 +119,10 @@ export type ActionItemCreate = {
      * Source Briefing Id
      */
     source_briefing_id?: string | null;
+    /**
+     * Source Suggestion
+     */
+    source_suggestion?: string | null;
 };
 
 /**
@@ -157,6 +161,10 @@ export type ActionItemPublic = {
      * Source Briefing Id
      */
     source_briefing_id: string | null;
+    /**
+     * Source Suggestion
+     */
+    source_suggestion: string | null;
     /**
      * Created By Id
      */
@@ -1348,6 +1356,10 @@ export type actionsReadActionsData = {
          */
         category?: 'priority' | 'risk' | 'opportunity' | null;
         /**
+         * Source Briefing Id
+         */
+        source_briefing_id?: string | null;
+        /**
          * Skip
          */
         skip?: number;
@@ -1491,6 +1503,36 @@ export type actionsUpdateActionResponses = {
 };
 
 export type actionsUpdateActionResponse = actionsUpdateActionResponses[keyof actionsUpdateActionResponses];
+
+export type actionsReadActionSourceBriefingData = {
+    body?: never;
+    path: {
+        /**
+         * Action Id
+         */
+        action_id: string;
+    };
+    query?: never;
+    url: '/api/v1/actions/{action_id}/source-briefing';
+};
+
+export type actionsReadActionSourceBriefingErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsReadActionSourceBriefingError = actionsReadActionSourceBriefingErrors[keyof actionsReadActionSourceBriefingErrors];
+
+export type actionsReadActionSourceBriefingResponses = {
+    /**
+     * Successful Response
+     */
+    200: AIDailyBriefingPublic;
+};
+
+export type actionsReadActionSourceBriefingResponse = actionsReadActionSourceBriefingResponses[keyof actionsReadActionSourceBriefingResponses];
 
 export type aiReadAiStatusData = {
     body?: never;

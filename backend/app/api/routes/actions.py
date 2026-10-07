@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, func, select
 
 from app.api.deps import CurrentUser, SessionDep
@@ -13,6 +14,7 @@ from app.models import (
     ActionItemUpdate,
     ActionStatus,
     AIDailyBriefing,
+    AIDailyBriefingPublic,
     get_datetime_utc,
 )
 
@@ -39,18 +41,60 @@ def create_action(
 ) -> ActionItem:
     """Create a user-approved operational action."""
 
-    if (
-        action_in.source_briefing_id is not None
-        and session.get(AIDailyBriefing, action_in.source_briefing_id) is None
-    ):
-        raise HTTPException(status_code=404, detail="Source briefing not found")
+    if action_in.source_briefing_id is not None:
+        briefing = session.get(AIDailyBriefing, action_in.source_briefing_id)
+        if briefing is None:
+            raise HTTPException(status_code=404, detail="Source briefing not found")
+
+        suggestions = {
+            "priority": briefing.priorities,
+            "risk": briefing.risks,
+            "opportunity": briefing.opportunities,
+        }[action_in.category]
+        if action_in.source_suggestion not in suggestions:
+            raise HTTPException(
+                status_code=422,
+                detail="Source suggestion is not present in that briefing category",
+            )
+
+        duplicate_filters = (
+            ActionItem.created_by_id == current_user.id,
+            ActionItem.source_briefing_id == action_in.source_briefing_id,
+            ActionItem.category == action_in.category,
+        )
+        duplicate = session.exec(
+            select(ActionItem).where(
+                *duplicate_filters,
+                ActionItem.source_suggestion == action_in.source_suggestion,
+            )
+        ).first()
+        if duplicate is None:
+            duplicate = session.exec(
+                select(ActionItem).where(
+                    *duplicate_filters,
+                    col(ActionItem.source_suggestion).is_(None),
+                    ActionItem.title == action_in.source_suggestion,
+                )
+            ).first()
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This briefing suggestion is already in the Action Center",
+            )
 
     action = ActionItem.model_validate(
         action_in,
         update={"created_by_id": current_user.id},
     )
     session.add(action)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This briefing suggestion is already in the Action Center",
+        ) from error
     session.refresh(action)
     return action
 
@@ -61,6 +105,7 @@ def read_actions(
     current_user: CurrentUser,
     action_status: ActionStatus | None = Query(default=None, alias="status"),
     category: ActionCategory | None = None,
+    source_briefing_id: uuid.UUID | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=100),
 ) -> ActionItemsPublic:
@@ -71,6 +116,8 @@ def read_actions(
         filters.append(ActionItem.status == action_status)
     if category is not None:
         filters.append(ActionItem.category == category)
+    if source_briefing_id is not None:
+        filters.append(ActionItem.source_briefing_id == source_briefing_id)
 
     count = session.exec(
         select(func.count()).select_from(ActionItem).where(*filters)
@@ -97,6 +144,27 @@ def read_action(
     """Read one action owned by the current user."""
 
     return _get_owned_action(session, current_user, action_id)
+
+
+@router.get(
+    "/{action_id}/source-briefing",
+    response_model=AIDailyBriefingPublic,
+)
+def read_action_source_briefing(
+    session: SessionDep,
+    current_user: CurrentUser,
+    action_id: uuid.UUID,
+) -> AIDailyBriefing:
+    """Read the saved briefing that produced an owned action."""
+
+    action = _get_owned_action(session, current_user, action_id)
+    if action.source_briefing_id is None:
+        raise HTTPException(status_code=404, detail="Action has no source briefing")
+
+    briefing = session.get(AIDailyBriefing, action.source_briefing_id)
+    if briefing is None:
+        raise HTTPException(status_code=404, detail="Source briefing not found")
+    return briefing
 
 
 @router.patch("/{action_id}", response_model=ActionItemPublic)

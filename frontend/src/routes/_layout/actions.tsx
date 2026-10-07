@@ -8,11 +8,12 @@ import {
   Clock3,
   ListChecks,
   LoaderCircle,
+  Pencil,
   Plus,
   Sparkles,
   Trash2,
 } from "lucide-react"
-import { type FormEvent, useMemo, useState } from "react"
+import { type FormEvent, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -20,6 +21,7 @@ import {
   type ActionItemPublic,
   type ActionItemUpdate,
   ActionsService,
+  type AIDailyBriefingPublic,
 } from "@/client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -101,6 +103,24 @@ function formatDate(value: string | null | undefined): string {
   )
 }
 
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("en-AU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value))
+}
+
+function actionToForm(action?: ActionItemPublic | null): ActionForm {
+  if (!action) return emptyAction
+  return {
+    title: action.title,
+    description: action.description ?? "",
+    category: action.category,
+    priority: action.priority,
+    due_date: action.due_date ?? "",
+  }
+}
+
 function getErrorMessage(error: unknown): string {
   if (!isAxiosError(error)) {
     return "The request could not be completed. Please try again."
@@ -149,24 +169,41 @@ export const Route = createFileRoute("/_layout/actions")({
 })
 
 function ActionEditor({
+  action,
   open,
   onOpenChange,
 }: {
+  action?: ActionItemPublic | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<ActionForm>(emptyAction)
+  const [form, setForm] = useState<ActionForm>(() => actionToForm(action))
   const [formError, setFormError] = useState<string | null>(null)
+  const isEditing = Boolean(action)
 
-  const createMutation = useMutation({
-    mutationFn: async (payload: ActionItemCreate) => {
-      const response = await ActionsService.createAction({ body: payload })
+  useEffect(() => {
+    if (open) {
+      setForm(actionToForm(action))
+      setFormError(null)
+    }
+  }, [action, open])
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: ActionItemCreate | ActionItemUpdate) => {
+      const response = action
+        ? await ActionsService.updateAction({
+            path: { action_id: action.id },
+            body: payload,
+          })
+        : await ActionsService.createAction({
+            body: payload as ActionItemCreate,
+          })
       return response.data
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: actionsQueryKey })
-      toast.success("Action created")
+      toast.success(isEditing ? "Action updated" : "Action created")
       setForm(emptyAction)
       setFormError(null)
       onOpenChange(false)
@@ -181,7 +218,7 @@ function ActionEditor({
       return
     }
     setFormError(null)
-    createMutation.mutate({
+    saveMutation.mutate({
       title,
       description: form.description.trim() || null,
       category: form.category,
@@ -194,12 +231,12 @@ function ActionEditor({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!createMutation.isPending) {
+        if (!saveMutation.isPending) {
           onOpenChange(nextOpen)
           if (!nextOpen) {
             setForm(emptyAction)
             setFormError(null)
-            createMutation.reset()
+            saveMutation.reset()
           }
         }
       }}
@@ -207,9 +244,13 @@ function ActionEditor({
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit}>
           <DialogHeader>
-            <DialogTitle>Create action</DialogTitle>
+            <DialogTitle>
+              {isEditing ? "Edit action" : "Create action"}
+            </DialogTitle>
             <DialogDescription>
-              Add an operational task for you to review and complete.
+              {isEditing
+                ? "Update the task details while keeping its original source."
+                : "Add an operational task for you to review and complete."}
             </DialogDescription>
           </DialogHeader>
 
@@ -302,12 +343,14 @@ function ActionEditor({
               />
             </div>
 
-            {formError || createMutation.error ? (
+            {formError || saveMutation.error ? (
               <Alert variant="destructive">
                 <AlertCircle />
-                <AlertTitle>Action not created</AlertTitle>
+                <AlertTitle>
+                  Action not {isEditing ? "updated" : "created"}
+                </AlertTitle>
                 <AlertDescription>
-                  {formError ?? getErrorMessage(createMutation.error)}
+                  {formError ?? getErrorMessage(saveMutation.error)}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -318,20 +361,105 @@ function ActionEditor({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={createMutation.isPending}
+              disabled={saveMutation.isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? (
+            <Button type="submit" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? (
                 <LoaderCircle className="animate-spin" />
+              ) : isEditing ? (
+                <Pencil />
               ) : (
                 <Plus />
               )}
-              Create action
+              {isEditing ? "Save changes" : "Create action"}
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function SourceBriefingDialog({
+  action,
+  onOpenChange,
+}: {
+  action: ActionItemPublic | null
+  onOpenChange: (open: boolean) => void
+}) {
+  const sourceQuery = useQuery<AIDailyBriefingPublic>({
+    queryKey: ["actions", "source-briefing", action?.id],
+    queryFn: async () => {
+      if (!action) throw new Error("No action selected")
+      const response = await ActionsService.readActionSourceBriefing({
+        path: { action_id: action.id },
+      })
+      return response.data
+    },
+    enabled: Boolean(action),
+  })
+  const sourceSuggestion = action?.source_suggestion ?? action?.title
+  const sourceCategory = sourceQuery.data
+    ? sourceQuery.data.priorities.includes(sourceSuggestion ?? "")
+      ? "priority"
+      : sourceQuery.data.risks.includes(sourceSuggestion ?? "")
+        ? "risk"
+        : sourceQuery.data.opportunities.includes(sourceSuggestion ?? "")
+          ? "opportunity"
+          : action?.category
+    : action?.category
+
+  return (
+    <Dialog open={Boolean(action)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Source briefing</DialogTitle>
+          <DialogDescription>
+            The saved AI briefing that produced this approved action.
+          </DialogDescription>
+        </DialogHeader>
+
+        {sourceQuery.error ? (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Source unavailable</AlertTitle>
+            <AlertDescription>
+              {getErrorMessage(sourceQuery.error)}
+            </AlertDescription>
+          </Alert>
+        ) : sourceQuery.isPending || !sourceQuery.data ? (
+          <div className="space-y-3 py-4" role="status">
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : (
+          <div className="space-y-5 py-2">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">
+                {formatDate(sourceQuery.data.report_date)}
+              </Badge>
+              <Badge variant="outline">{sourceQuery.data.model}</Badge>
+            </div>
+            <div>
+              <h3 className="font-semibold">{sourceQuery.data.headline}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {sourceQuery.data.summary}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Original {sourceCategory ?? "priority"} suggestion
+              </p>
+              <p className="mt-2 text-sm font-medium">{sourceSuggestion}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Generated {formatDateTime(sourceQuery.data.generated_at)}
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -366,6 +494,12 @@ function SummaryCard({
 function Actions() {
   const queryClient = useQueryClient()
   const [editorOpen, setEditorOpen] = useState(false)
+  const [editingAction, setEditingAction] = useState<ActionItemPublic | null>(
+    null,
+  )
+  const [sourceAction, setSourceAction] = useState<ActionItemPublic | null>(
+    null,
+  )
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
 
@@ -455,7 +589,12 @@ function Actions() {
             choose to approve.
           </p>
         </div>
-        <Button onClick={() => setEditorOpen(true)}>
+        <Button
+          onClick={() => {
+            setEditingAction(null)
+            setEditorOpen(true)
+          }}
+        >
           <Plus />
           New action
         </Button>
@@ -607,36 +746,61 @@ function Actions() {
                           </p>
                         ) : null}
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={`Delete ${action.title}`}
-                        disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete the action “${action.title}”?`,
-                            )
-                          ) {
-                            deleteMutation.mutate(action.id)
-                          }
-                        }}
-                      >
-                        <Trash2 />
-                      </Button>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Edit ${action.title}`}
+                          onClick={() => {
+                            setEditingAction(action)
+                            setEditorOpen(true)
+                          }}
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Delete ${action.title}`}
+                          disabled={deleteMutation.isPending}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Delete the action “${action.title}”?`,
+                              )
+                            ) {
+                              deleteMutation.mutate(action.id)
+                            }
+                          }}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="mt-5 flex flex-col justify-between gap-3 border-t pt-4 sm:flex-row sm:items-center">
-                      <div
-                        className={cn(
-                          "flex items-center gap-2 text-xs text-muted-foreground",
-                          isOverdue && "font-medium text-destructive",
-                        )}
-                      >
-                        <CalendarDays className="size-4" />
-                        {isOverdue ? "Overdue · " : ""}
-                        {formatDate(action.due_date)}
-                        {action.source_briefing_id ? " · From AI briefing" : ""}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div
+                          className={cn(
+                            "flex items-center gap-2 text-xs text-muted-foreground",
+                            isOverdue && "font-medium text-destructive",
+                          )}
+                        >
+                          <CalendarDays className="size-4" />
+                          {isOverdue ? "Overdue · " : ""}
+                          {formatDate(action.due_date)}
+                        </div>
+                        {action.source_briefing_id ? (
+                          <Button
+                            className="h-auto px-1 py-0 text-xs"
+                            size="sm"
+                            variant="link"
+                            onClick={() => setSourceAction(action)}
+                          >
+                            <Sparkles />
+                            View source
+                          </Button>
+                        ) : null}
                       </div>
                       <Select
                         value={action.status}
@@ -669,7 +833,20 @@ function Actions() {
         </CardContent>
       </Card>
 
-      <ActionEditor open={editorOpen} onOpenChange={setEditorOpen} />
+      <ActionEditor
+        action={editingAction}
+        open={editorOpen}
+        onOpenChange={(nextOpen) => {
+          setEditorOpen(nextOpen)
+          if (!nextOpen) setEditingAction(null)
+        }}
+      />
+      <SourceBriefingDialog
+        action={sourceAction}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setSourceAction(null)
+        }}
+      />
     </div>
   )
 }

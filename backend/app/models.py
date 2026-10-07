@@ -503,6 +503,17 @@ class ActionItemContent(SQLModel):
 
 class ActionItemCreate(ActionItemContent):
     source_briefing_id: uuid.UUID | None = None
+    source_suggestion: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @model_validator(mode="after")
+    def validate_source_reference(self) -> Self:
+        has_briefing = self.source_briefing_id is not None
+        has_suggestion = self.source_suggestion is not None
+        if has_briefing != has_suggestion:
+            raise ValueError(
+                "source_briefing_id and source_suggestion must be provided together"
+            )
+        return self
 
 
 class ActionItemUpdate(SQLModel):
@@ -541,6 +552,17 @@ class ActionItem(SQLModel, table=True):
             "status",
             "created_at",
         ),
+        Index(
+            "uq_actionitem_owner_source_suggestion",
+            "created_by_id",
+            "source_briefing_id",
+            "category",
+            "source_suggestion",
+            unique=True,
+            postgresql_where=text(
+                "source_briefing_id IS NOT NULL AND source_suggestion IS NOT NULL"
+            ),
+        ),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -556,6 +578,7 @@ class ActionItem(SQLModel, table=True):
         ondelete="SET NULL",
         index=True,
     )
+    source_suggestion: str | None = Field(default=None, max_length=255)
     created_by_id: uuid.UUID = Field(
         foreign_key="user.id",
         ondelete="CASCADE",
@@ -581,6 +604,7 @@ class ActionItemPublic(ActionItemContent):
     id: uuid.UUID
     status: ActionStatus
     source_briefing_id: uuid.UUID | None
+    source_suggestion: str | None
     created_by_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
