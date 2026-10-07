@@ -92,6 +92,134 @@ export type AIStatusPublic = {
 };
 
 /**
+ * ActionItemCreate
+ */
+export type ActionItemCreate = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Category
+     */
+    category?: 'priority' | 'risk' | 'opportunity';
+    /**
+     * Priority
+     */
+    priority?: 'low' | 'medium' | 'high';
+    /**
+     * Due Date
+     */
+    due_date?: string | null;
+    /**
+     * Source Briefing Id
+     */
+    source_briefing_id?: string | null;
+};
+
+/**
+ * ActionItemPublic
+ */
+export type ActionItemPublic = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Category
+     */
+    category: 'priority' | 'risk' | 'opportunity';
+    /**
+     * Priority
+     */
+    priority: 'low' | 'medium' | 'high';
+    /**
+     * Due Date
+     */
+    due_date?: string | null;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Status
+     */
+    status: 'open' | 'in_progress' | 'completed' | 'dismissed';
+    /**
+     * Source Briefing Id
+     */
+    source_briefing_id: string | null;
+    /**
+     * Created By Id
+     */
+    created_by_id: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Completed At
+     */
+    completed_at: string | null;
+};
+
+/**
+ * ActionItemUpdate
+ */
+export type ActionItemUpdate = {
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Category
+     */
+    category?: 'priority' | 'risk' | 'opportunity' | null;
+    /**
+     * Priority
+     */
+    priority?: 'low' | 'medium' | 'high' | null;
+    /**
+     * Status
+     */
+    status?: 'open' | 'in_progress' | 'completed' | 'dismissed' | null;
+    /**
+     * Due Date
+     */
+    due_date?: string | null;
+};
+
+/**
+ * ActionItemsPublic
+ */
+export type ActionItemsPublic = {
+    /**
+     * Data
+     */
+    data: Array<ActionItemPublic>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
  * Body_login-login_access_token
  */
 export type Body_login_login_access_token = {
@@ -1206,6 +1334,163 @@ export type utilsHealthCheckResponses = {
 };
 
 export type utilsHealthCheckResponse = utilsHealthCheckResponses[keyof utilsHealthCheckResponses];
+
+export type actionsReadActionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Status
+         */
+        status?: 'open' | 'in_progress' | 'completed' | 'dismissed' | null;
+        /**
+         * Category
+         */
+        category?: 'priority' | 'risk' | 'opportunity' | null;
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/actions/';
+};
+
+export type actionsReadActionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsReadActionsError = actionsReadActionsErrors[keyof actionsReadActionsErrors];
+
+export type actionsReadActionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ActionItemsPublic;
+};
+
+export type actionsReadActionsResponse = actionsReadActionsResponses[keyof actionsReadActionsResponses];
+
+export type actionsCreateActionData = {
+    body: ActionItemCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/actions/';
+};
+
+export type actionsCreateActionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsCreateActionError = actionsCreateActionErrors[keyof actionsCreateActionErrors];
+
+export type actionsCreateActionResponses = {
+    /**
+     * Successful Response
+     */
+    201: ActionItemPublic;
+};
+
+export type actionsCreateActionResponse = actionsCreateActionResponses[keyof actionsCreateActionResponses];
+
+export type actionsDeleteActionData = {
+    body?: never;
+    path: {
+        /**
+         * Action Id
+         */
+        action_id: string;
+    };
+    query?: never;
+    url: '/api/v1/actions/{action_id}';
+};
+
+export type actionsDeleteActionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsDeleteActionError = actionsDeleteActionErrors[keyof actionsDeleteActionErrors];
+
+export type actionsDeleteActionResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type actionsDeleteActionResponse = actionsDeleteActionResponses[keyof actionsDeleteActionResponses];
+
+export type actionsReadActionData = {
+    body?: never;
+    path: {
+        /**
+         * Action Id
+         */
+        action_id: string;
+    };
+    query?: never;
+    url: '/api/v1/actions/{action_id}';
+};
+
+export type actionsReadActionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsReadActionError = actionsReadActionErrors[keyof actionsReadActionErrors];
+
+export type actionsReadActionResponses = {
+    /**
+     * Successful Response
+     */
+    200: ActionItemPublic;
+};
+
+export type actionsReadActionResponse = actionsReadActionResponses[keyof actionsReadActionResponses];
+
+export type actionsUpdateActionData = {
+    body: ActionItemUpdate;
+    path: {
+        /**
+         * Action Id
+         */
+        action_id: string;
+    };
+    query?: never;
+    url: '/api/v1/actions/{action_id}';
+};
+
+export type actionsUpdateActionErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsUpdateActionError = actionsUpdateActionErrors[keyof actionsUpdateActionErrors];
+
+export type actionsUpdateActionResponses = {
+    /**
+     * Successful Response
+     */
+    200: ActionItemPublic;
+};
+
+export type actionsUpdateActionResponse = actionsUpdateActionResponses[keyof actionsUpdateActionResponses];
 
 export type aiReadAiStatusData = {
     body?: never;

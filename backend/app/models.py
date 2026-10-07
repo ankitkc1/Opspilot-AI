@@ -483,6 +483,115 @@ class AIDailyBriefingsPublic(SQLModel):
     count: int
 
 
+# -------------------------
+# AI action center models
+# -------------------------
+
+
+ActionCategory = Literal["priority", "risk", "opportunity"]
+ActionPriority = Literal["low", "medium", "high"]
+ActionStatus = Literal["open", "in_progress", "completed", "dismissed"]
+
+
+class ActionItemContent(SQLModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    category: ActionCategory = "priority"
+    priority: ActionPriority = "medium"
+    due_date: date | None = None
+
+
+class ActionItemCreate(ActionItemContent):
+    source_briefing_id: uuid.UUID | None = None
+
+
+class ActionItemUpdate(SQLModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    category: ActionCategory | None = None
+    priority: ActionPriority | None = None
+    status: ActionStatus | None = None
+    due_date: date | None = None
+
+    @model_validator(mode="after")
+    def reject_null_required_fields(self) -> Self:
+        for field_name in ("title", "category", "priority", "status"):
+            if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                raise ValueError(f"{field_name} cannot be null")
+        return self
+
+
+class ActionItem(SQLModel, table=True):
+    __table_args__ = (
+        CheckConstraint(
+            "category IN ('priority', 'risk', 'opportunity')",
+            name="ck_actionitem_category",
+        ),
+        CheckConstraint(
+            "priority IN ('low', 'medium', 'high')",
+            name="ck_actionitem_priority",
+        ),
+        CheckConstraint(
+            "status IN ('open', 'in_progress', 'completed', 'dismissed')",
+            name="ck_actionitem_status",
+        ),
+        Index(
+            "ix_actionitem_owner_status_created",
+            "created_by_id",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    category: str = Field(default="priority", max_length=20)
+    priority: str = Field(default="medium", max_length=20)
+    status: str = Field(default="open", max_length=20)
+    due_date: date | None = None
+    source_briefing_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="aidailybriefing.id",
+        ondelete="SET NULL",
+        index=True,
+    )
+    created_by_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE",
+        index=True,
+    )
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    updated_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class ActionItemPublic(ActionItemContent):
+    category: ActionCategory
+    priority: ActionPriority
+    id: uuid.UUID
+    status: ActionStatus
+    source_briefing_id: uuid.UUID | None
+    created_by_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None
+
+
+class ActionItemsPublic(SQLModel):
+    data: list[ActionItemPublic]
+    count: int
+
+
 # Generic message
 class Message(SQLModel):
     message: str

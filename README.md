@@ -11,6 +11,7 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - Daily revenue, sales, top-product, and low-stock dashboard
 - Local Ollama connectivity and model-readiness checks
 - Grounded AI daily briefings with saved history
+- User-approved AI action tracking with priorities, due dates, and status
 - PostgreSQL migrations and automated backend tests
 
 The local AI workflow uses Ollama with `qwen3:4b` to turn deterministic dashboard
@@ -72,6 +73,11 @@ unavailable or malformed model responses are rejected with clear API errors.
 Generated briefings are saved for auditability. Use
 `GET /api/v1/ai/daily-briefing` to load the latest saved briefing for a date and
 `GET /api/v1/ai/daily-briefings` to retrieve paginated briefing history.
+
+Briefing priorities, risks, and opportunities can be added to the Action Center
+only after a user approves them. Actions remain linked to their source briefing,
+are private to their creator, and support open, in-progress, completed, and
+dismissed states through the authenticated `/api/v1/actions/` API.
 
 ## Quality checks
 

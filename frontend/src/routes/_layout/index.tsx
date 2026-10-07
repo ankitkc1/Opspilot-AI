@@ -11,6 +11,7 @@ import {
   LoaderCircle,
   PackageCheck,
   PackageSearch,
+  Plus,
   ReceiptText,
   RefreshCw,
   ShieldAlert,
@@ -20,8 +21,14 @@ import {
   Trophy,
 } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
-import { type AIDailyBriefingPublic, AiService } from "@/client"
+import {
+  type ActionItemCreate,
+  ActionsService,
+  type AIDailyBriefingPublic,
+  AiService,
+} from "@/client"
 import { client } from "@/client/client.gen"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -211,6 +218,8 @@ type BriefingListProps = {
   emptyMessage: string
   icon: LucideIcon
   iconClassName: string
+  isCreating: (item: string) => boolean
+  onCreateAction: (item: string) => void
 }
 
 function BriefingList({
@@ -219,6 +228,8 @@ function BriefingList({
   emptyMessage,
   icon: Icon,
   iconClassName,
+  isCreating,
+  onCreateAction,
 }: BriefingListProps) {
   return (
     <div className="rounded-xl border bg-background/70 p-4">
@@ -229,9 +240,23 @@ function BriefingList({
       {items.length > 0 ? (
         <ul className="space-y-2 text-sm text-muted-foreground">
           {items.map((item) => (
-            <li key={item} className="flex gap-2">
+            <li key={item} className="flex items-start gap-2">
               <span className="mt-2 size-1.5 shrink-0 rounded-full bg-current" />
-              <span>{item}</span>
+              <span className="min-w-0 flex-1">{item}</span>
+              <Button
+                className="-mr-2 -mt-1 shrink-0"
+                size="sm"
+                variant="ghost"
+                disabled={isCreating(item)}
+                onClick={() => onCreateAction(item)}
+              >
+                {isCreating(item) ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <Plus />
+                )}
+                Add
+              </Button>
             </li>
           ))}
         </ul>
@@ -249,6 +274,11 @@ type DailyBriefingProps = {
   isLoading: boolean
   isStale: boolean
   onGenerate: () => void
+  creatingAction?: ActionItemCreate
+  onCreateAction: (
+    title: string,
+    category: "priority" | "risk" | "opportunity",
+  ) => void
 }
 
 function DailyBriefing({
@@ -258,6 +288,8 @@ function DailyBriefing({
   isLoading,
   isStale,
   onGenerate,
+  creatingAction,
+  onCreateAction,
 }: DailyBriefingProps) {
   return (
     <Card className="overflow-hidden border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-background to-background">
@@ -359,6 +391,8 @@ function DailyBriefing({
                 emptyMessage="No immediate priorities identified."
                 icon={ListChecks}
                 iconClassName="text-sky-600 dark:text-sky-400"
+                isCreating={(item) => creatingAction?.title === item}
+                onCreateAction={(item) => onCreateAction(item, "priority")}
               />
               <BriefingList
                 title="Risks"
@@ -366,6 +400,8 @@ function DailyBriefing({
                 emptyMessage="No specific risks identified."
                 icon={ShieldAlert}
                 iconClassName="text-rose-600 dark:text-rose-400"
+                isCreating={(item) => creatingAction?.title === item}
+                onCreateAction={(item) => onCreateAction(item, "risk")}
               />
               <BriefingList
                 title="Opportunities"
@@ -373,6 +409,8 @@ function DailyBriefing({
                 emptyMessage="No specific opportunities identified."
                 icon={Lightbulb}
                 iconClassName="text-amber-600 dark:text-amber-400"
+                isCreating={(item) => creatingAction?.title === item}
+                onCreateAction={(item) => onCreateAction(item, "opportunity")}
               />
             </div>
 
@@ -442,6 +480,23 @@ function Dashboard() {
         ["ai-daily-briefing", briefing.report_date],
         briefing,
       )
+    },
+  })
+  const createActionMutation = useMutation({
+    mutationFn: async (payload: ActionItemCreate) => {
+      const response = await ActionsService.createAction({ body: payload })
+      return response.data
+    },
+    onSuccess: async (action) => {
+      await queryClient.invalidateQueries({ queryKey: ["actions"] })
+      toast.success("Added to Action Center", {
+        description: action.title,
+      })
+    },
+    onError: (actionError) => {
+      toast.error("Action not created", {
+        description: getBriefingError(actionError),
+      })
     },
   })
 
@@ -575,11 +630,31 @@ function Dashboard() {
 
           <DailyBriefing
             briefing={briefing}
+            creatingAction={
+              createActionMutation.isPending
+                ? createActionMutation.variables
+                : undefined
+            }
             error={briefingMutation.error ?? latestBriefingQuery.error}
             isGenerating={briefingMutation.isPending}
             isLoading={latestBriefingQuery.isPending}
             isStale={isBriefingStale}
             onGenerate={() => briefingMutation.mutate()}
+            onCreateAction={(title, category) => {
+              if (!briefing) return
+              const priority =
+                category === "risk"
+                  ? "high"
+                  : category === "opportunity"
+                    ? "low"
+                    : "medium"
+              createActionMutation.mutate({
+                title,
+                category,
+                priority,
+                source_briefing_id: briefing.id,
+              })
+            }}
           />
 
           <section className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
