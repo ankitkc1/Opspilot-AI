@@ -1,5 +1,6 @@
 import {
   Boxes,
+  History,
   LayoutDashboard,
   ListChecks,
   PackageOpen,
@@ -21,6 +22,7 @@ import { User } from "./User"
 
 const baseItems: Item[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/" },
+  { icon: History, title: "Briefings", path: "/briefings" },
   { icon: ListChecks, title: "Actions", path: "/actions" },
   { icon: PackageOpen, title: "Products", path: "/products" },
   { icon: Boxes, title: "Inventory", path: "/inventory" },
