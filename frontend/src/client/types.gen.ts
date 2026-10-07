@@ -35,6 +35,70 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * DashboardSummaryPublic
+ */
+export type DashboardSummaryPublic = {
+    /**
+     * Report Date
+     */
+    report_date: string;
+    /**
+     * Timezone
+     */
+    timezone: string;
+    /**
+     * Revenue
+     */
+    revenue: string;
+    /**
+     * Sales Count
+     */
+    sales_count: number;
+    /**
+     * Units Sold
+     */
+    units_sold: string;
+    /**
+     * Average Sale Value
+     */
+    average_sale_value: string;
+    /**
+     * Top Products
+     */
+    top_products: Array<DashboardTopProductPublic>;
+    /**
+     * Low Stock Count
+     */
+    low_stock_count: number;
+    /**
+     * Low Stock
+     */
+    low_stock: Array<InventoryBalancePublic>;
+};
+
+/**
+ * DashboardTopProductPublic
+ */
+export type DashboardTopProductPublic = {
+    /**
+     * Product Id
+     */
+    product_id: string;
+    /**
+     * Product Name
+     */
+    product_name: string;
+    /**
+     * Quantity Sold
+     */
+    quantity_sold: string;
+    /**
+     * Revenue
+     */
+    revenue: string;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -45,67 +109,129 @@ export type HTTPValidationError = {
 };
 
 /**
- * ItemCreate
+ * InventoryBalancePublic
  */
-export type ItemCreate = {
+export type InventoryBalancePublic = {
     /**
-     * Title
+     * Product Id
      */
-    title: string;
+    product_id: string;
     /**
-     * Description
+     * Product Name
      */
-    description?: string | null;
+    product_name: string;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Track Inventory
+     */
+    track_inventory: boolean;
+    /**
+     * Reorder Level
+     */
+    reorder_level: string;
+    /**
+     * Quantity On Hand
+     */
+    quantity_on_hand: string;
+    /**
+     * Is Low Stock
+     */
+    is_low_stock: boolean;
 };
 
 /**
- * ItemPublic
+ * InventoryBalancesPublic
  */
-export type ItemPublic = {
+export type InventoryBalancesPublic = {
     /**
-     * Title
+     * Data
      */
-    title: string;
+    data: Array<InventoryBalancePublic>;
     /**
-     * Description
+     * Count
      */
-    description?: string | null;
+    count: number;
+};
+
+/**
+ * InventoryMovementCreate
+ */
+export type InventoryMovementCreate = {
+    /**
+     * Product Id
+     */
+    product_id: string;
+    /**
+     * Movement Type
+     */
+    movement_type: 'opening' | 'receipt' | 'adjustment';
+    /**
+     * Quantity Delta
+     */
+    quantity_delta: number | string;
+    /**
+     * Occurred At
+     */
+    occurred_at?: string;
+    /**
+     * Note
+     */
+    note?: string | null;
+};
+
+/**
+ * InventoryMovementPublic
+ */
+export type InventoryMovementPublic = {
     /**
      * Id
      */
     id: string;
     /**
-     * Owner Id
+     * Product Id
      */
-    owner_id: string;
+    product_id: string;
+    /**
+     * Sale Id
+     */
+    sale_id: string | null;
+    /**
+     * Movement Type
+     */
+    movement_type: string;
+    /**
+     * Quantity Delta
+     */
+    quantity_delta: string;
+    /**
+     * Occurred At
+     */
+    occurred_at: string;
+    /**
+     * Note
+     */
+    note: string | null;
     /**
      * Created At
      */
-    created_at?: string | null;
+    created_at: string;
 };
 
 /**
- * ItemUpdate
+ * InventoryMovementsPublic
  */
-export type ItemUpdate = {
-    /**
-     * Title
-     */
-    title?: string | null;
-    /**
-     * Description
-     */
-    description?: string | null;
-};
-
-/**
- * ItemsPublic
- */
-export type ItemsPublic = {
+export type InventoryMovementsPublic = {
     /**
      * Data
      */
-    data: Array<ItemPublic>;
+    data: Array<InventoryMovementPublic>;
     /**
      * Count
      */
@@ -156,6 +282,228 @@ export type PrivateUserCreate = {
      * Is Verified
      */
     is_verified?: boolean;
+};
+
+/**
+ * ProductCreate
+ */
+export type ProductCreate = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Selling Price
+     */
+    selling_price: number | string;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Is Active
+     */
+    is_active?: boolean;
+    /**
+     * Track Inventory
+     */
+    track_inventory?: boolean;
+    /**
+     * Reorder Level
+     */
+    reorder_level?: number | string;
+};
+
+/**
+ * ProductPublic
+ */
+export type ProductPublic = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Selling Price
+     */
+    selling_price: string;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Is Active
+     */
+    is_active?: boolean;
+    /**
+     * Track Inventory
+     */
+    track_inventory?: boolean;
+    /**
+     * Reorder Level
+     */
+    reorder_level?: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * ProductUpdate
+ */
+export type ProductUpdate = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Category
+     */
+    category?: string | null;
+    /**
+     * Selling Price
+     */
+    selling_price?: number | string | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Is Active
+     */
+    is_active?: boolean | null;
+    /**
+     * Track Inventory
+     */
+    track_inventory?: boolean | null;
+    /**
+     * Reorder Level
+     */
+    reorder_level?: number | string | null;
+};
+
+/**
+ * ProductsPublic
+ */
+export type ProductsPublic = {
+    /**
+     * Data
+     */
+    data: Array<ProductPublic>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
+ * SaleCreate
+ */
+export type SaleCreate = {
+    /**
+     * Sold At
+     */
+    sold_at?: string;
+    /**
+     * Items
+     */
+    items: Array<SaleItemCreate>;
+};
+
+/**
+ * SaleItemCreate
+ */
+export type SaleItemCreate = {
+    /**
+     * Product Id
+     */
+    product_id: string;
+    /**
+     * Quantity
+     */
+    quantity: number | string;
+};
+
+/**
+ * SaleItemPublic
+ */
+export type SaleItemPublic = {
+    /**
+     * Product Id
+     */
+    product_id: string;
+    /**
+     * Quantity
+     */
+    quantity: string;
+    /**
+     * Unit Price
+     */
+    unit_price: string;
+    /**
+     * Line Total
+     */
+    line_total: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Sale Id
+     */
+    sale_id: string;
+};
+
+/**
+ * SalePublic
+ */
+export type SalePublic = {
+    /**
+     * Sold At
+     */
+    sold_at?: string;
+    /**
+     * Total Amount
+     */
+    total_amount: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Items
+     */
+    items: Array<SaleItemPublic>;
+};
+
+/**
+ * SalesPublic
+ */
+export type SalesPublic = {
+    /**
+     * Data
+     */
+    data: Array<SalePublic>;
+    /**
+     * Count
+     */
+    count: number;
 };
 
 /**
@@ -772,7 +1120,7 @@ export type utilsHealthCheckResponses = {
 
 export type utilsHealthCheckResponse = utilsHealthCheckResponses[keyof utilsHealthCheckResponses];
 
-export type itemsReadItemsData = {
+export type productsReadProductsData = {
     body?: never;
     path?: never;
     query?: {
@@ -785,141 +1133,429 @@ export type itemsReadItemsData = {
          */
         limit?: number;
     };
-    url: '/api/v1/items/';
+    url: '/api/v1/products/';
 };
 
-export type itemsReadItemsErrors = {
+export type productsReadProductsErrors = {
     /**
      * Validation Error
      */
     422: HTTPValidationError;
 };
 
-export type itemsReadItemsError = itemsReadItemsErrors[keyof itemsReadItemsErrors];
+export type productsReadProductsError = productsReadProductsErrors[keyof productsReadProductsErrors];
 
-export type itemsReadItemsResponses = {
+export type productsReadProductsResponses = {
     /**
      * Successful Response
      */
-    200: ItemsPublic;
+    200: ProductsPublic;
 };
 
-export type itemsReadItemsResponse = itemsReadItemsResponses[keyof itemsReadItemsResponses];
+export type productsReadProductsResponse = productsReadProductsResponses[keyof productsReadProductsResponses];
 
-export type itemsCreateItemData = {
-    body: ItemCreate;
+export type productsCreateProductData = {
+    body: ProductCreate;
     path?: never;
     query?: never;
-    url: '/api/v1/items/';
+    url: '/api/v1/products/';
 };
 
-export type itemsCreateItemErrors = {
+export type productsCreateProductErrors = {
     /**
      * Validation Error
      */
     422: HTTPValidationError;
 };
 
-export type itemsCreateItemError = itemsCreateItemErrors[keyof itemsCreateItemErrors];
+export type productsCreateProductError = productsCreateProductErrors[keyof productsCreateProductErrors];
 
-export type itemsCreateItemResponses = {
+export type productsCreateProductResponses = {
     /**
      * Successful Response
      */
-    200: ItemPublic;
+    201: ProductPublic;
 };
 
-export type itemsCreateItemResponse = itemsCreateItemResponses[keyof itemsCreateItemResponses];
+export type productsCreateProductResponse = productsCreateProductResponses[keyof productsCreateProductResponses];
 
-export type itemsDeleteItemData = {
+export type productsDeleteProductData = {
     body?: never;
     path: {
         /**
-         * Id
+         * Product Id
          */
-        id: string;
+        product_id: string;
     };
     query?: never;
-    url: '/api/v1/items/{id}';
+    url: '/api/v1/products/{product_id}';
 };
 
-export type itemsDeleteItemErrors = {
+export type productsDeleteProductErrors = {
     /**
      * Validation Error
      */
     422: HTTPValidationError;
 };
 
-export type itemsDeleteItemError = itemsDeleteItemErrors[keyof itemsDeleteItemErrors];
+export type productsDeleteProductError = productsDeleteProductErrors[keyof productsDeleteProductErrors];
 
-export type itemsDeleteItemResponses = {
+export type productsDeleteProductResponses = {
     /**
      * Successful Response
      */
     200: Message;
 };
 
-export type itemsDeleteItemResponse = itemsDeleteItemResponses[keyof itemsDeleteItemResponses];
+export type productsDeleteProductResponse = productsDeleteProductResponses[keyof productsDeleteProductResponses];
 
-export type itemsReadItemData = {
+export type productsReadProductData = {
     body?: never;
     path: {
         /**
-         * Id
+         * Product Id
          */
-        id: string;
+        product_id: string;
     };
     query?: never;
-    url: '/api/v1/items/{id}';
+    url: '/api/v1/products/{product_id}';
 };
 
-export type itemsReadItemErrors = {
+export type productsReadProductErrors = {
     /**
      * Validation Error
      */
     422: HTTPValidationError;
 };
 
-export type itemsReadItemError = itemsReadItemErrors[keyof itemsReadItemErrors];
+export type productsReadProductError = productsReadProductErrors[keyof productsReadProductErrors];
 
-export type itemsReadItemResponses = {
+export type productsReadProductResponses = {
     /**
      * Successful Response
      */
-    200: ItemPublic;
+    200: ProductPublic;
 };
 
-export type itemsReadItemResponse = itemsReadItemResponses[keyof itemsReadItemResponses];
+export type productsReadProductResponse = productsReadProductResponses[keyof productsReadProductResponses];
 
-export type itemsUpdateItemData = {
-    body: ItemUpdate;
+export type productsUpdateProductData = {
+    body: ProductUpdate;
     path: {
         /**
-         * Id
+         * Product Id
          */
-        id: string;
+        product_id: string;
     };
     query?: never;
-    url: '/api/v1/items/{id}';
+    url: '/api/v1/products/{product_id}';
 };
 
-export type itemsUpdateItemErrors = {
+export type productsUpdateProductErrors = {
     /**
      * Validation Error
      */
     422: HTTPValidationError;
 };
 
-export type itemsUpdateItemError = itemsUpdateItemErrors[keyof itemsUpdateItemErrors];
+export type productsUpdateProductError = productsUpdateProductErrors[keyof productsUpdateProductErrors];
 
-export type itemsUpdateItemResponses = {
+export type productsUpdateProductResponses = {
     /**
      * Successful Response
      */
-    200: ItemPublic;
+    200: ProductPublic;
 };
 
-export type itemsUpdateItemResponse = itemsUpdateItemResponses[keyof itemsUpdateItemResponses];
+export type productsUpdateProductResponse = productsUpdateProductResponses[keyof productsUpdateProductResponses];
+
+export type salesReadSalesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/sales/';
+};
+
+export type salesReadSalesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type salesReadSalesError = salesReadSalesErrors[keyof salesReadSalesErrors];
+
+export type salesReadSalesResponses = {
+    /**
+     * Successful Response
+     */
+    200: SalesPublic;
+};
+
+export type salesReadSalesResponse = salesReadSalesResponses[keyof salesReadSalesResponses];
+
+export type salesCreateSaleData = {
+    body: SaleCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/sales/';
+};
+
+export type salesCreateSaleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type salesCreateSaleError = salesCreateSaleErrors[keyof salesCreateSaleErrors];
+
+export type salesCreateSaleResponses = {
+    /**
+     * Successful Response
+     */
+    201: SalePublic;
+};
+
+export type salesCreateSaleResponse = salesCreateSaleResponses[keyof salesCreateSaleResponses];
+
+export type salesReadSaleData = {
+    body?: never;
+    path: {
+        /**
+         * Sale Id
+         */
+        sale_id: string;
+    };
+    query?: never;
+    url: '/api/v1/sales/{sale_id}';
+};
+
+export type salesReadSaleErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type salesReadSaleError = salesReadSaleErrors[keyof salesReadSaleErrors];
+
+export type salesReadSaleResponses = {
+    /**
+     * Successful Response
+     */
+    200: SalePublic;
+};
+
+export type salesReadSaleResponse = salesReadSaleResponses[keyof salesReadSaleResponses];
+
+export type inventoryReadInventoryMovementsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Product Id
+         */
+        product_id?: string | null;
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/inventory/movements/';
+};
+
+export type inventoryReadInventoryMovementsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inventoryReadInventoryMovementsError = inventoryReadInventoryMovementsErrors[keyof inventoryReadInventoryMovementsErrors];
+
+export type inventoryReadInventoryMovementsResponses = {
+    /**
+     * Successful Response
+     */
+    200: InventoryMovementsPublic;
+};
+
+export type inventoryReadInventoryMovementsResponse = inventoryReadInventoryMovementsResponses[keyof inventoryReadInventoryMovementsResponses];
+
+export type inventoryCreateInventoryMovementData = {
+    body: InventoryMovementCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/inventory/movements/';
+};
+
+export type inventoryCreateInventoryMovementErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inventoryCreateInventoryMovementError = inventoryCreateInventoryMovementErrors[keyof inventoryCreateInventoryMovementErrors];
+
+export type inventoryCreateInventoryMovementResponses = {
+    /**
+     * Successful Response
+     */
+    201: InventoryMovementPublic;
+};
+
+export type inventoryCreateInventoryMovementResponse = inventoryCreateInventoryMovementResponses[keyof inventoryCreateInventoryMovementResponses];
+
+export type inventoryReadInventoryBalancesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/inventory/balances/';
+};
+
+export type inventoryReadInventoryBalancesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inventoryReadInventoryBalancesError = inventoryReadInventoryBalancesErrors[keyof inventoryReadInventoryBalancesErrors];
+
+export type inventoryReadInventoryBalancesResponses = {
+    /**
+     * Successful Response
+     */
+    200: InventoryBalancesPublic;
+};
+
+export type inventoryReadInventoryBalancesResponse = inventoryReadInventoryBalancesResponses[keyof inventoryReadInventoryBalancesResponses];
+
+export type inventoryReadLowStockProductsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Skip
+         */
+        skip?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/inventory/low-stock/';
+};
+
+export type inventoryReadLowStockProductsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inventoryReadLowStockProductsError = inventoryReadLowStockProductsErrors[keyof inventoryReadLowStockProductsErrors];
+
+export type inventoryReadLowStockProductsResponses = {
+    /**
+     * Successful Response
+     */
+    200: InventoryBalancesPublic;
+};
+
+export type inventoryReadLowStockProductsResponse = inventoryReadLowStockProductsResponses[keyof inventoryReadLowStockProductsResponses];
+
+export type inventoryReadInventoryBalanceData = {
+    body?: never;
+    path: {
+        /**
+         * Product Id
+         */
+        product_id: string;
+    };
+    query?: never;
+    url: '/api/v1/inventory/balances/{product_id}';
+};
+
+export type inventoryReadInventoryBalanceErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type inventoryReadInventoryBalanceError = inventoryReadInventoryBalanceErrors[keyof inventoryReadInventoryBalanceErrors];
+
+export type inventoryReadInventoryBalanceResponses = {
+    /**
+     * Successful Response
+     */
+    200: InventoryBalancePublic;
+};
+
+export type inventoryReadInventoryBalanceResponse = inventoryReadInventoryBalanceResponses[keyof inventoryReadInventoryBalanceResponses];
+
+export type dashboardReadDashboardSummaryData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Report Date
+         */
+        report_date?: string | null;
+        /**
+         * Top Limit
+         */
+        top_limit?: number;
+        /**
+         * Low Stock Limit
+         */
+        low_stock_limit?: number;
+    };
+    url: '/api/v1/dashboard/summary/';
+};
+
+export type dashboardReadDashboardSummaryErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type dashboardReadDashboardSummaryError = dashboardReadDashboardSummaryErrors[keyof dashboardReadDashboardSummaryErrors];
+
+export type dashboardReadDashboardSummaryResponses = {
+    /**
+     * Successful Response
+     */
+    200: DashboardSummaryPublic;
+};
+
+export type dashboardReadDashboardSummaryResponse = dashboardReadDashboardSummaryResponses[keyof dashboardReadDashboardSummaryResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;

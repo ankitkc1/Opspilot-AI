@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
@@ -52,7 +52,12 @@ def read_products(
     count_statement = select(func.count()).select_from(Product)
     count = session.exec(count_statement).one()
 
-    statement = select(Product).offset(skip).limit(limit)
+    statement = (
+        select(Product)
+        .order_by(col(Product.created_at).desc(), col(Product.id).desc())
+        .offset(skip)
+        .limit(limit)
+    )
 
     products = session.exec(statement).all()
 

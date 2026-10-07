@@ -1,88 +1,73 @@
-# Full Stack FastAPI Template
+# OpsPilot AI
 
-[![Test Docker Compose](../../actions/workflows/test-docker-compose.yml/badge.svg)](../../actions/workflows/test-docker-compose.yml)
-[![Test Backend](../../actions/workflows/test-backend.yml/badge.svg)](../../actions/workflows/test-backend.yml)
+OpsPilot is a local-first operations system for small businesses. The current core release manages products, inventory, and sales, then turns that data into a daily operating dashboard.
 
-## Technology Stack and Features
+## Core features
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-  - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-  - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-  - 💾 [PostgreSQL](https://www.postgresql.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-  - 🧩 Built into the backend application and served by FastAPI on the same domain as the API.
-  - 💃 Using TypeScript, hooks, [Vite](https://vitejs.dev), and other parts of a modern frontend stack.
-  - 🎨 [Tailwind CSS](https://tailwindcss.com) and [shadcn/ui](https://ui.shadcn.com) for the frontend components.
-  - 🤖 An automatically generated frontend client.
-  - 🧪 [Playwright](https://playwright.dev) for end-to-end testing.
-  - 🦇 Dark mode support.
-- ☁️ [FastAPI Cloud](https://fastapicloud.com) for deployment.
-- 🐋 [Docker Compose](https://www.docker.com) for local services and self-hosted deployment.
-  - 📞 [Traefik](https://traefik.io) as a reverse proxy with automatic HTTPS.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email-based password recovery.
-- ✉️ [React Email](https://react.email) for email templates.
-- 📬 [Mailpit](https://mailpit.axllent.org) for local email testing during development.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+- Secure account login and user administration
+- Product catalog with pricing and inventory policy
+- Inventory balances and stock movement history
+- Sales recording with automatic stock deductions
+- Daily revenue, sales, top-product, and low-stock dashboard
+- PostgreSQL migrations and automated backend tests
 
-### Dashboard Login
+The local AI assistant is the next milestone. It will be added on a separate branch after this core release is reviewed and merged.
 
-![Dashboard login screenshot](img/login.png)
+## Architecture
 
-### Dashboard - Admin
+- `backend/app/models.py` contains the database and API data models.
+- `backend/app/api/routes/` contains the FastAPI endpoints.
+- `backend/app/services/` contains reusable business rules.
+- `backend/app/alembic/versions/` contains database migrations.
+- `backend/tests/` contains backend tests.
+- `frontend/src/routes/_layout/` contains the main React pages.
+- `frontend/src/components/` contains shared UI components.
+- `frontend/src/client/` is generated from the backend OpenAPI schema.
 
-![Admin dashboard screenshot](img/dashboard.png)
+## Run with Docker
 
-### Dashboard - Items
+From the project root:
 
-![Items dashboard screenshot](img/dashboard-items.png)
+```powershell
+docker compose run --rm backend bash scripts/prestart.sh
+docker compose up --build
+```
 
-### Dashboard - Dark Mode
+Then open:
 
-![Dark mode dashboard screenshot](img/dashboard-dark.png)
+- Application: <http://localhost:8000>
+- API documentation: <http://localhost:8000/docs>
+- Database admin: <http://localhost:8080>
+- Development email inbox: <http://localhost:8025>
 
-### React Email Templates
+The `changethis` warnings are acceptable only for local development. Replace those values in `.env` before any deployment.
 
-![Email templates screenshot](img/react-email.png)
+## Quality checks
 
-### Mailpit - Local Email Testing
+Backend:
 
-![Mailpit screenshot](img/mailpit.png)
+```powershell
+cd backend
+uv run ruff check app tests
+uv run mypy app tests
+uv run pytest
+```
 
-### Interactive API Documentation
+Frontend:
 
-![API docs](img/docs.png)
+```powershell
+cd frontend
+bun install
+bun run build
+```
 
-## How to Use It
+## Additional documentation
 
-Click the **Use this template** button at the top of this page to create a new repository.
-
-## Backend Development
-
-Backend docs: [backend/README.md](./backend/README.md).
-
-## Frontend Development
-
-Frontend docs: [frontend/README.md](./frontend/README.md).
-
-## Deployment
-
-FastAPI Cloud deployment: [deployment.md](./deployment.md).
-
-Self-hosted deployment with Docker Compose: [deployment-docker-compose.md](./deployment-docker-compose.md).
-
-## Development
-
-General development docs: [development.md](./development.md).
-
-This includes the local FastAPI and Vite workflow, Docker Compose services, `.env` configuration, and more.
-
-## Release Notes
-
-Check the file [release-notes.md](./release-notes.md).
+- [Backend development](backend/README.md)
+- [Frontend development](frontend/README.md)
+- [Local development](development.md)
+- [Docker deployment](deployment-docker-compose.md)
 
 ## License
 
-The Full Stack FastAPI Template is licensed under the terms of the MIT license.
+This project retains the MIT license from its original FastAPI full-stack template foundation.

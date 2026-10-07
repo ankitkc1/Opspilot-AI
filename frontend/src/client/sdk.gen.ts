@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { itemsCreateItemData, itemsCreateItemErrors, itemsCreateItemResponses, itemsDeleteItemData, itemsDeleteItemErrors, itemsDeleteItemResponses, itemsReadItemData, itemsReadItemErrors, itemsReadItemResponses, itemsReadItemsData, itemsReadItemsErrors, itemsReadItemsResponses, itemsUpdateItemData, itemsUpdateItemErrors, itemsUpdateItemResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -36,7 +36,7 @@ export class LoginService {
             }
         });
     }
-    
+
     /**
      * Test Token
      *
@@ -50,7 +50,7 @@ export class LoginService {
             ...options
         });
     }
-    
+
     /**
      * Recover Password
      *
@@ -63,7 +63,7 @@ export class LoginService {
             ...options
         });
     }
-    
+
     /**
      * Reset Password
      *
@@ -80,7 +80,7 @@ export class LoginService {
             }
         });
     }
-    
+
     /**
      * Recover Password Html Content
      *
@@ -110,7 +110,7 @@ export class UsersService {
             ...options
         });
     }
-    
+
     /**
      * Create User
      *
@@ -128,7 +128,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Delete User Me
      *
@@ -284,31 +284,31 @@ export class UtilsService {
     }
 }
 
-export class ItemsService {
+export class ProductsService {
     /**
-     * Read Items
+     * Read Products
      *
-     * Retrieve items.
+     * Retrieve products.
      */
-    public static readItems<ThrowOnError extends boolean = true>(options?: Options<itemsReadItemsData, ThrowOnError>) {
-        return (options?.client ?? client).get<itemsReadItemsResponses, itemsReadItemsErrors, ThrowOnError>({
+    public static readProducts<ThrowOnError extends boolean = true>(options?: Options<productsReadProductsData, ThrowOnError>) {
+        return (options?.client ?? client).get<productsReadProductsResponses, productsReadProductsErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/',
+            url: '/api/v1/products/',
             ...options
         });
     }
     
     /**
-     * Create Item
+     * Create Product
      *
-     * Create new item.
+     * Create a new product.
      */
-    public static createItem<ThrowOnError extends boolean = true>(options: Options<itemsCreateItemData, ThrowOnError>) {
-        return (options.client ?? client).post<itemsCreateItemResponses, itemsCreateItemErrors, ThrowOnError>({
+    public static createProduct<ThrowOnError extends boolean = true>(options: Options<productsCreateProductData, ThrowOnError>) {
+        return (options.client ?? client).post<productsCreateProductResponses, productsCreateProductErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/',
+            url: '/api/v1/products/',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
@@ -318,48 +318,188 @@ export class ItemsService {
     }
     
     /**
-     * Delete Item
+     * Delete Product
      *
-     * Delete an item.
+     * Delete a product.
      */
-    public static deleteItem<ThrowOnError extends boolean = true>(options: Options<itemsDeleteItemData, ThrowOnError>) {
-        return (options.client ?? client).delete<itemsDeleteItemResponses, itemsDeleteItemErrors, ThrowOnError>({
+    public static deleteProduct<ThrowOnError extends boolean = true>(options: Options<productsDeleteProductData, ThrowOnError>) {
+        return (options.client ?? client).delete<productsDeleteProductResponses, productsDeleteProductErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/products/{product_id}',
             ...options
         });
     }
-    
+
     /**
-     * Read Item
+     * Read Product
      *
-     * Get item by ID.
+     * Retrieve a product by ID.
      */
-    public static readItem<ThrowOnError extends boolean = true>(options: Options<itemsReadItemData, ThrowOnError>) {
-        return (options.client ?? client).get<itemsReadItemResponses, itemsReadItemErrors, ThrowOnError>({
+    public static readProduct<ThrowOnError extends boolean = true>(options: Options<productsReadProductData, ThrowOnError>) {
+        return (options.client ?? client).get<productsReadProductResponses, productsReadProductErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/products/{product_id}',
             ...options
         });
     }
-    
+
     /**
-     * Update Item
+     * Update Product
      *
-     * Update an item.
+     * Update a product.
      */
-    public static updateItem<ThrowOnError extends boolean = true>(options: Options<itemsUpdateItemData, ThrowOnError>) {
-        return (options.client ?? client).put<itemsUpdateItemResponses, itemsUpdateItemErrors, ThrowOnError>({
+    public static updateProduct<ThrowOnError extends boolean = true>(options: Options<productsUpdateProductData, ThrowOnError>) {
+        return (options.client ?? client).patch<productsUpdateProductResponses, productsUpdateProductErrors, ThrowOnError>({
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/products/{product_id}',
             ...options,
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
             }
+        });
+    }
+}
+
+export class SalesService {
+    /**
+     * Read Sales
+     *
+     * Retrieve sales, newest first.
+     */
+    public static readSales<ThrowOnError extends boolean = true>(options?: Options<salesReadSalesData, ThrowOnError>) {
+        return (options?.client ?? client).get<salesReadSalesResponses, salesReadSalesErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/sales/',
+            ...options
+        });
+    }
+
+    /**
+     * Create Sale
+     *
+     * Create a sale using current Product prices.
+     */
+    public static createSale<ThrowOnError extends boolean = true>(options: Options<salesCreateSaleData, ThrowOnError>) {
+        return (options.client ?? client).post<salesCreateSaleResponses, salesCreateSaleErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/sales/',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+
+    /**
+     * Read Sale
+     *
+     * Retrieve a sale by ID.
+     */
+    public static readSale<ThrowOnError extends boolean = true>(options: Options<salesReadSaleData, ThrowOnError>) {
+        return (options.client ?? client).get<salesReadSaleResponses, salesReadSaleErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/sales/{sale_id}',
+            ...options
+        });
+    }
+}
+
+export class InventoryService {
+    /**
+     * Read Inventory Movements
+     *
+     * Retrieve inventory movements, newest first.
+     */
+    public static readInventoryMovements<ThrowOnError extends boolean = true>(options?: Options<inventoryReadInventoryMovementsData, ThrowOnError>) {
+        return (options?.client ?? client).get<inventoryReadInventoryMovementsResponses, inventoryReadInventoryMovementsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inventory/movements/',
+            ...options
+        });
+    }
+
+    /**
+     * Create Inventory Movement
+     *
+     * Record an opening balance, stock receipt, or signed manual adjustment.
+     */
+    public static createInventoryMovement<ThrowOnError extends boolean = true>(options: Options<inventoryCreateInventoryMovementData, ThrowOnError>) {
+        return (options.client ?? client).post<inventoryCreateInventoryMovementResponses, inventoryCreateInventoryMovementErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inventory/movements/',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+
+    /**
+     * Read Inventory Balances
+     *
+     * Retrieve current stock balances for all products.
+     */
+    public static readInventoryBalances<ThrowOnError extends boolean = true>(options?: Options<inventoryReadInventoryBalancesData, ThrowOnError>) {
+        return (options?.client ?? client).get<inventoryReadInventoryBalancesResponses, inventoryReadInventoryBalancesErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inventory/balances/',
+            ...options
+        });
+    }
+
+    /**
+     * Read Low Stock Products
+     *
+     * Retrieve active tracked products at or below their reorder level.
+     */
+    public static readLowStockProducts<ThrowOnError extends boolean = true>(options?: Options<inventoryReadLowStockProductsData, ThrowOnError>) {
+        return (options?.client ?? client).get<inventoryReadLowStockProductsResponses, inventoryReadLowStockProductsErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inventory/low-stock/',
+            ...options
+        });
+    }
+
+    /**
+     * Read Inventory Balance
+     *
+     * Retrieve the current stock balance for one product.
+     */
+    public static readInventoryBalance<ThrowOnError extends boolean = true>(options: Options<inventoryReadInventoryBalanceData, ThrowOnError>) {
+        return (options.client ?? client).get<inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalanceErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/inventory/balances/{product_id}',
+            ...options
+        });
+    }
+}
+
+export class DashboardService {
+    /**
+     * Read Dashboard Summary
+     *
+     * Retrieve daily sales KPIs and the current low-stock summary.
+     */
+    public static readDashboardSummary<ThrowOnError extends boolean = true>(options?: Options<dashboardReadDashboardSummaryData, ThrowOnError>) {
+        return (options?.client ?? client).get<dashboardReadDashboardSummaryResponses, dashboardReadDashboardSummaryErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/dashboard/summary/',
+            ...options
         });
     }
 }
