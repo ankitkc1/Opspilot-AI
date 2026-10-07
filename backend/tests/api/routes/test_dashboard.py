@@ -84,6 +84,9 @@ def test_dashboard_requires_authentication(client: TestClient) -> None:
     response = client.get(f"{settings.API_V1_STR}/dashboard/summary/")
     assert response.status_code == 401
 
+    trends_response = client.get(f"{settings.API_V1_STR}/dashboard/trends/")
+    assert trends_response.status_code == 401
+
 
 def test_dashboard_empty_day_returns_zero_metrics(
     client: TestClient,
@@ -255,5 +258,161 @@ def test_dashboard_rejects_invalid_limits(
         f"{settings.API_V1_STR}/dashboard/summary/",
         headers=superuser_token_headers,
         params={"report_date": REPORT_DATE, parameter: value},
+    )
+    assert response.status_code == 422
+
+
+def test_dashboard_trends_empty_period_returns_zero_filled_days(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    response = client.get(
+        f"{settings.API_V1_STR}/dashboard/trends/",
+        headers=superuser_token_headers,
+        params={"end_date": "2099-01-07", "days": 7},
+    )
+
+    assert response.status_code == 200
+    content = response.json()
+    assert content["start_date"] == "2099-01-01"
+    assert content["end_date"] == "2099-01-07"
+    assert content["timezone"] == "Australia/Sydney"
+    assert content["days"] == 7
+    assert Decimal(content["revenue"]) == Decimal("0.00")
+    assert content["sales_count"] == 0
+    assert Decimal(content["units_sold"]) == Decimal("0.000")
+    assert Decimal(content["average_sale_value"]) == Decimal("0.00")
+    assert len(content["daily"]) == 7
+    assert [day["report_date"] for day in content["daily"]] == [
+        f"2099-01-0{day}" for day in range(1, 8)
+    ]
+    assert all(Decimal(day["revenue"]) == 0 for day in content["daily"])
+    assert Decimal(
+        content["previous_period"]["revenue_change_percent"]
+    ) == Decimal("0.0")
+
+
+@pytest.mark.parametrize(
+    ("days", "expected_start"),
+    [(14, "2098-12-25"), (30, "2098-12-09")],
+)
+def test_dashboard_trends_supports_longer_periods(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    days: int,
+    expected_start: str,
+) -> None:
+    response = client.get(
+        f"{settings.API_V1_STR}/dashboard/trends/",
+        headers=superuser_token_headers,
+        params={"end_date": "2099-01-07", "days": days},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["start_date"] == expected_start
+    assert len(response.json()["daily"]) == days
+
+
+def test_dashboard_trends_aggregate_and_compare_periods(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    product = _create_product(
+        db,
+        name="Trend product",
+        price=Decimal("10.00"),
+    )
+    assert _create_sale(
+        client,
+        superuser_token_headers,
+        sold_at="2040-01-26T13:00:00Z",
+        items=[(product, "1.000")],
+    ).status_code == 201
+    assert _create_sale(
+        client,
+        superuser_token_headers,
+        sold_at="2040-02-01T13:00:00Z",
+        items=[(product, "2.000")],
+    ).status_code == 201
+    assert _create_sale(
+        client,
+        superuser_token_headers,
+        sold_at="2040-02-02T13:00:00Z",
+        items=[(product, "3.000")],
+    ).status_code == 201
+
+    response = client.get(
+        f"{settings.API_V1_STR}/dashboard/trends/",
+        headers=superuser_token_headers,
+        params={"end_date": "2040-02-03", "days": 7},
+    )
+
+    assert response.status_code == 200
+    content = response.json()
+    assert content["start_date"] == "2040-01-28"
+    assert Decimal(content["revenue"]) == Decimal("50.00")
+    assert content["sales_count"] == 2
+    assert Decimal(content["units_sold"]) == Decimal("5.000")
+    assert Decimal(content["average_sale_value"]) == Decimal("25.00")
+
+    daily = {day["report_date"]: day for day in content["daily"]}
+    assert Decimal(daily["2040-02-02"]["revenue"]) == Decimal("20.00")
+    assert daily["2040-02-02"]["sales_count"] == 1
+    assert Decimal(daily["2040-02-03"]["revenue"]) == Decimal("30.00")
+    assert Decimal(daily["2040-01-28"]["revenue"]) == Decimal("0.00")
+
+    previous = content["previous_period"]
+    assert previous["start_date"] == "2040-01-21"
+    assert previous["end_date"] == "2040-01-27"
+    assert Decimal(previous["revenue"]) == Decimal("10.00")
+    assert previous["sales_count"] == 1
+    assert Decimal(previous["units_sold"]) == Decimal("1.000")
+    assert Decimal(previous["revenue_change_percent"]) == Decimal("400.0")
+    assert Decimal(previous["sales_count_change_percent"]) == Decimal("100.0")
+    assert Decimal(previous["units_sold_change_percent"]) == Decimal("400.0")
+
+
+def test_dashboard_trends_marks_growth_from_zero_as_new(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    product = _create_product(
+        db,
+        name="New trend product",
+        price=Decimal("4.00"),
+    )
+    assert _create_sale(
+        client,
+        superuser_token_headers,
+        sold_at="2041-02-01T13:00:00Z",
+        items=[(product, "1.000")],
+    ).status_code == 201
+
+    response = client.get(
+        f"{settings.API_V1_STR}/dashboard/trends/",
+        headers=superuser_token_headers,
+        params={"end_date": "2041-02-02", "days": 7},
+    )
+
+    assert response.status_code == 200
+    previous = response.json()["previous_period"]
+    assert Decimal(previous["revenue"]) == 0
+    assert previous["revenue_change_percent"] is None
+    assert previous["sales_count_change_percent"] is None
+    assert previous["units_sold_change_percent"] is None
+
+
+@pytest.mark.parametrize("days", [1, 8, 31])
+def test_dashboard_trends_rejects_unsupported_periods(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    days: int,
+) -> None:
+    response = client.get(
+        f"{settings.API_V1_STR}/dashboard/trends/",
+        headers=superuser_token_headers,
+        params={"end_date": "2040-02-03", "days": days},
     )
     assert response.status_code == 422

@@ -5,6 +5,7 @@ import {
   ListChecks,
   PackageOpen,
   ShoppingCart,
+  TrendingUp,
   Users,
 } from "lucide-react"
 
@@ -22,6 +23,7 @@ import { User } from "./User"
 
 const baseItems: Item[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/" },
+  { icon: TrendingUp, title: "Trends", path: "/trends" },
   { icon: History, title: "Briefings", path: "/briefings" },
   { icon: ListChecks, title: "Actions", path: "/actions" },
   { icon: PackageOpen, title: "Products", path: "/products" },

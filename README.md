@@ -9,6 +9,7 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - Inventory balances and stock movement history
 - Sales recording with automatic stock deductions
 - Daily revenue, sales, top-product, and low-stock dashboard
+- 7, 14, and 30-day operations trends with prior-period comparison
 - Local Ollama connectivity and model-readiness checks
 - Grounded AI daily briefings with saved history
 - Searchable briefing audit UI with the original source metrics

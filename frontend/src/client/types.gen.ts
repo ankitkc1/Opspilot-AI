@@ -322,6 +322,113 @@ export type DashboardTopProductPublic = {
 };
 
 /**
+ * DashboardTrendComparisonPublic
+ */
+export type DashboardTrendComparisonPublic = {
+    /**
+     * Start Date
+     */
+    start_date: string;
+    /**
+     * End Date
+     */
+    end_date: string;
+    /**
+     * Revenue
+     */
+    revenue: string;
+    /**
+     * Sales Count
+     */
+    sales_count: number;
+    /**
+     * Units Sold
+     */
+    units_sold: string;
+    /**
+     * Revenue Change Percent
+     */
+    revenue_change_percent: string | null;
+    /**
+     * Sales Count Change Percent
+     */
+    sales_count_change_percent: string | null;
+    /**
+     * Units Sold Change Percent
+     */
+    units_sold_change_percent: string | null;
+};
+
+/**
+ * DashboardTrendDayPublic
+ */
+export type DashboardTrendDayPublic = {
+    /**
+     * Report Date
+     */
+    report_date: string;
+    /**
+     * Revenue
+     */
+    revenue: string;
+    /**
+     * Sales Count
+     */
+    sales_count: number;
+    /**
+     * Units Sold
+     */
+    units_sold: string;
+    /**
+     * Average Sale Value
+     */
+    average_sale_value: string;
+};
+
+/**
+ * DashboardTrendsPublic
+ */
+export type DashboardTrendsPublic = {
+    /**
+     * Start Date
+     */
+    start_date: string;
+    /**
+     * End Date
+     */
+    end_date: string;
+    /**
+     * Timezone
+     */
+    timezone: string;
+    /**
+     * Days
+     */
+    days: number;
+    /**
+     * Revenue
+     */
+    revenue: string;
+    /**
+     * Sales Count
+     */
+    sales_count: number;
+    /**
+     * Units Sold
+     */
+    units_sold: string;
+    /**
+     * Average Sale Value
+     */
+    average_sale_value: string;
+    previous_period: DashboardTrendComparisonPublic;
+    /**
+     * Daily
+     */
+    daily: Array<DashboardTrendDayPublic>;
+};
+
+/**
  * HTTPValidationError
  */
 export type HTTPValidationError = {
@@ -742,6 +849,11 @@ export type Token = {
      */
     token_type?: string;
 };
+
+/**
+ * TrendDays
+ */
+export type TrendDays = 7 | 14 | 30;
 
 /**
  * UpdatePassword
@@ -2086,6 +2198,37 @@ export type dashboardReadDashboardSummaryResponses = {
 };
 
 export type dashboardReadDashboardSummaryResponse = dashboardReadDashboardSummaryResponses[keyof dashboardReadDashboardSummaryResponses];
+
+export type dashboardReadDashboardTrendsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * End Date
+         */
+        end_date?: string | null;
+        days?: TrendDays;
+    };
+    url: '/api/v1/dashboard/trends/';
+};
+
+export type dashboardReadDashboardTrendsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type dashboardReadDashboardTrendsError = dashboardReadDashboardTrendsErrors[keyof dashboardReadDashboardTrendsErrors];
+
+export type dashboardReadDashboardTrendsResponses = {
+    /**
+     * Successful Response
+     */
+    200: DashboardTrendsPublic;
+};
+
+export type dashboardReadDashboardTrendsResponse = dashboardReadDashboardTrendsResponses[keyof dashboardReadDashboardTrendsResponses];
 
 export type privateCreateUserData = {
     body: PrivateUserCreate;

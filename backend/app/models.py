@@ -420,6 +420,38 @@ class DashboardSummaryPublic(SQLModel):
     low_stock: list[InventoryBalancePublic]
 
 
+class DashboardTrendDayPublic(SQLModel):
+    report_date: date
+    revenue: Decimal
+    sales_count: int
+    units_sold: Decimal
+    average_sale_value: Decimal
+
+
+class DashboardTrendComparisonPublic(SQLModel):
+    start_date: date
+    end_date: date
+    revenue: Decimal
+    sales_count: int
+    units_sold: Decimal
+    revenue_change_percent: Decimal | None
+    sales_count_change_percent: Decimal | None
+    units_sold_change_percent: Decimal | None
+
+
+class DashboardTrendsPublic(SQLModel):
+    start_date: date
+    end_date: date
+    timezone: str
+    days: int
+    revenue: Decimal
+    sales_count: int
+    units_sold: Decimal
+    average_sale_value: Decimal
+    previous_period: DashboardTrendComparisonPublic
+    daily: list[DashboardTrendDayPublic]
+
+
 # -------------------------
 # Local AI models
 # -------------------------
