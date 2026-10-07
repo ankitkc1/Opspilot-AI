@@ -1,15 +1,18 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models import AIDailyBriefingPublic, AIStatusPublic
+from app.models import AIDailyBriefingPublic, AIDailyBriefingsPublic, AIStatusPublic
 from app.services.ai_briefing import (
     AIBriefingResponseError,
     generate_daily_briefing,
+    get_daily_briefing_history,
+    get_latest_daily_briefing,
+    save_daily_briefing,
 )
-from app.services.dashboard import get_dashboard_summary
+from app.services.dashboard import get_dashboard_summary, resolve_report_date
 from app.services.ollama import OllamaClient, OllamaServiceError
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -58,7 +61,7 @@ def read_ai_status(
 @router.post("/daily-briefing", response_model=AIDailyBriefingPublic)
 def create_daily_briefing(
     session: SessionDep,
-    _current_user: CurrentUser,
+    current_user: CurrentUser,
     ollama: OllamaClientDep,
     report_date: date | None = None,
 ) -> AIDailyBriefingPublic:
@@ -66,7 +69,7 @@ def create_daily_briefing(
 
     source = get_dashboard_summary(session, report_date=report_date)
     try:
-        return generate_daily_briefing(ollama, source)
+        content = generate_daily_briefing(ollama, source)
     except OllamaServiceError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -77,3 +80,43 @@ def create_daily_briefing(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Local AI returned a briefing in an invalid format.",
         )
+
+    return save_daily_briefing(
+        session,
+        content=content,
+        source=source,
+        model=ollama.model,
+        generated_by_id=current_user.id,
+    )
+
+
+@router.get("/daily-briefing", response_model=AIDailyBriefingPublic | None)
+def read_latest_daily_briefing(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    report_date: date | None = None,
+) -> AIDailyBriefingPublic | None:
+    """Return the latest saved briefing for a business day, if one exists."""
+
+    return get_latest_daily_briefing(
+        session,
+        report_date=resolve_report_date(report_date),
+    )
+
+
+@router.get("/daily-briefings", response_model=AIDailyBriefingsPublic)
+def read_daily_briefing_history(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    report_date: date | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> AIDailyBriefingsPublic:
+    """List saved briefings newest first, optionally for one business day."""
+
+    return get_daily_briefing_history(
+        session,
+        report_date=report_date,
+        skip=skip,
+        limit=limit,
+    )

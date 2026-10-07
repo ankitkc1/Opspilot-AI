@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { isAxiosError } from "axios"
 import type { LucideIcon } from "lucide-react"
@@ -65,6 +65,10 @@ type DashboardSummary = {
   low_stock: LowStockItem[]
 }
 
+function isDailyBriefing(value: unknown): value is AIDailyBriefingPublic {
+  return typeof value === "object" && value !== null && "source" in value
+}
+
 const currencyFormatter = new Intl.NumberFormat("en-AU", {
   style: "currency",
   currency: "AUD",
@@ -119,7 +123,20 @@ function getBriefingError(error: unknown): string {
     if (typeof detail === "string") return detail
   }
 
-  return "The local AI could not create a briefing. Check that Ollama is running, then try again."
+  return "The briefing could not be loaded or created. Check the backend and Ollama, then try again."
+}
+
+function dashboardFingerprint(summary: DashboardSummary): string {
+  return JSON.stringify({
+    reportDate: summary.report_date,
+    revenue: summary.revenue,
+    salesCount: summary.sales_count,
+    unitsSold: summary.units_sold,
+    averageSaleValue: summary.average_sale_value,
+    topProducts: summary.top_products,
+    lowStockCount: summary.low_stock_count,
+    lowStock: summary.low_stock,
+  })
 }
 
 async function getDashboardSummary(
@@ -228,14 +245,18 @@ function BriefingList({
 type DailyBriefingProps = {
   briefing?: AIDailyBriefingPublic
   error: unknown
-  isPending: boolean
+  isGenerating: boolean
+  isLoading: boolean
+  isStale: boolean
   onGenerate: () => void
 }
 
 function DailyBriefing({
   briefing,
   error,
-  isPending,
+  isGenerating,
+  isLoading,
+  isStale,
   onGenerate,
 }: DailyBriefingProps) {
   return (
@@ -256,18 +277,20 @@ function DailyBriefing({
           <Button
             className="shrink-0"
             onClick={onGenerate}
-            disabled={isPending}
+            disabled={isGenerating || isLoading}
           >
-            {isPending ? (
+            {isGenerating ? (
               <LoaderCircle className="animate-spin" />
             ) : (
               <Sparkles />
             )}
-            {isPending
+            {isGenerating
               ? "Generating..."
-              : briefing
-                ? "Regenerate"
-                : "Generate briefing"}
+              : isStale
+                ? "Update briefing"
+                : briefing
+                  ? "Regenerate"
+                  : "Generate briefing"}
           </Button>
         </div>
       </CardHeader>
@@ -280,7 +303,7 @@ function DailyBriefing({
           </Alert>
         ) : null}
 
-        {isPending ? (
+        {isGenerating ? (
           <div className="space-y-4" aria-live="polite">
             <div>
               <p className="font-medium">Analysing the daily snapshot</p>
@@ -297,12 +320,30 @@ function DailyBriefing({
               ))}
             </div>
           </div>
+        ) : isLoading ? (
+          <div
+            className="space-y-3"
+            aria-label="Loading saved briefing"
+            role="status"
+          >
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
         ) : briefing ? (
           <div className="space-y-5">
             <div>
-              <Badge className="mb-3" variant="secondary">
-                Local AI
-              </Badge>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Badge variant="secondary">Local AI · Saved</Badge>
+                {isStale ? (
+                  <Badge
+                    className="border-amber-500/40 text-amber-700 dark:text-amber-300"
+                    variant="outline"
+                  >
+                    Dashboard changed
+                  </Badge>
+                ) : null}
+              </div>
               <h2 className="text-xl font-semibold tracking-tight">
                 {briefing.headline}
               </h2>
@@ -336,9 +377,10 @@ function DailyBriefing({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Generated locally with {briefing.model} at{" "}
+              Saved from {briefing.model} at{" "}
               {formatGeneratedAt(briefing.generated_at)}. Verify important
-              decisions against the source data below.
+              decisions against the source data below
+              {isStale ? ", then update this briefing" : ""}.
             </p>
           </div>
         ) : (
@@ -373,9 +415,20 @@ export const Route = createFileRoute("/_layout/")({
 
 function Dashboard() {
   const [reportDate, setReportDate] = useState(getSydneyDate)
+  const queryClient = useQueryClient()
   const { data, error, isFetching, isPending, refetch } = useQuery({
     queryKey: ["dashboard-summary", reportDate],
     queryFn: () => getDashboardSummary(reportDate),
+  })
+  const latestBriefingQuery = useQuery({
+    queryKey: ["ai-daily-briefing", reportDate],
+    queryFn: async () => {
+      const response = await AiService.readLatestDailyBriefing({
+        query: { report_date: reportDate },
+      })
+      return isDailyBriefing(response.data) ? response.data : null
+    },
+    enabled: Boolean(data),
   })
   const briefingMutation = useMutation({
     mutationFn: async () => {
@@ -384,12 +437,24 @@ function Dashboard() {
       })
       return response.data
     },
+    onSuccess: (briefing) => {
+      queryClient.setQueryData(
+        ["ai-daily-briefing", briefing.report_date],
+        briefing,
+      )
+    },
   })
 
-  const briefing =
-    briefingMutation.data?.report_date === data?.report_date
+  const generatedBriefing =
+    briefingMutation.data?.report_date === reportDate
       ? briefingMutation.data
       : undefined
+  const briefing = generatedBriefing ?? latestBriefingQuery.data ?? undefined
+  const isBriefingStale = Boolean(
+    briefing &&
+      data &&
+      dashboardFingerprint(briefing.source) !== dashboardFingerprint(data),
+  )
 
   const maxProductRevenue = Math.max(
     ...(data?.top_products ?? []).map((product) => Number(product.revenue)),
@@ -435,6 +500,7 @@ function Dashboard() {
               onClick={() => {
                 briefingMutation.reset()
                 void refetch()
+                void latestBriefingQuery.refetch()
               }}
               disabled={isFetching}
             >
@@ -509,8 +575,10 @@ function Dashboard() {
 
           <DailyBriefing
             briefing={briefing}
-            error={briefingMutation.error}
-            isPending={briefingMutation.isPending}
+            error={briefingMutation.error ?? latestBriefingQuery.error}
+            isGenerating={briefingMutation.isPending}
+            isLoading={latestBriefingQuery.isPending}
+            isStale={isBriefingStale}
             onGenerate={() => briefingMutation.mutate()}
           />
 

@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import EmailStr, model_validator
-from sqlalchemy import CheckConstraint, DateTime, Index, text
+from sqlalchemy import JSON, CheckConstraint, DateTime, Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -300,9 +300,7 @@ class InventoryMovementCreate(SQLModel):
         if self.quantity_delta == 0:
             raise ValueError("quantity_delta must not be zero")
         if self.movement_type in {"opening", "receipt"} and self.quantity_delta < 0:
-            raise ValueError(
-                f"{self.movement_type} quantity_delta must be positive"
-            )
+            raise ValueError(f"{self.movement_type} quantity_delta must be positive")
         return self
 
 
@@ -443,11 +441,46 @@ class AIDailyBriefingContent(SQLModel):
     opportunities: list[str] = Field(max_length=3)
 
 
-class AIDailyBriefingPublic(AIDailyBriefingContent):
+class AIDailyBriefing(AIDailyBriefingContent, table=True):
+    __table_args__ = (
+        Index(
+            "ix_aidailybriefing_report_date_generated_at",
+            "report_date",
+            "generated_at",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    priorities: list[str] = Field(min_length=1, max_length=3, sa_type=JSON)
+    risks: list[str] = Field(max_length=3, sa_type=JSON)
+    opportunities: list[str] = Field(max_length=3, sa_type=JSON)
     report_date: date
-    generated_at: datetime = Field(default_factory=get_datetime_utc)
+    generated_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    model: str = Field(max_length=100)
+    source: dict[str, object] = Field(sa_type=JSON)
+    generated_by_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        ondelete="SET NULL",
+        index=True,
+    )
+
+
+class AIDailyBriefingPublic(AIDailyBriefingContent):
+    id: uuid.UUID
+    report_date: date
+    generated_at: datetime
     model: str
     source: DashboardSummaryPublic
+    generated_by_id: uuid.UUID | None
+
+
+class AIDailyBriefingsPublic(SQLModel):
+    data: list[AIDailyBriefingPublic]
+    count: int
 
 
 # Generic message

@@ -1,13 +1,16 @@
 import json
+import uuid
 from collections.abc import Sequence
 from typing import Any, cast
 
 from fastapi.testclient import TestClient
 from httpx import Response
+from sqlmodel import Session
 
 from app.api.routes.ai import get_ollama_client
 from app.core.config import settings
 from app.main import app
+from app.models import AIDailyBriefing
 from app.services.ollama import OllamaClient, OllamaMessage, OllamaServiceError
 
 
@@ -79,6 +82,8 @@ def _request_briefing(
     client: TestClient,
     headers: dict[str, str],
     ollama: StubOllamaClient,
+    *,
+    report_date: str = "2099-01-01",
 ) -> Response:
     previous_override = app.dependency_overrides.get(get_ollama_client)
 
@@ -92,7 +97,7 @@ def _request_briefing(
             client.post(
                 f"{settings.API_V1_STR}/ai/daily-briefing",
                 headers=headers,
-                params={"report_date": "2099-01-01"},
+                params={"report_date": report_date},
             ),
         )
     finally:
@@ -169,10 +174,17 @@ def test_daily_briefing_requires_authentication(client: TestClient) -> None:
     response = client.post(f"{settings.API_V1_STR}/ai/daily-briefing")
     assert response.status_code == 401
 
+    response = client.get(f"{settings.API_V1_STR}/ai/daily-briefing")
+    assert response.status_code == 401
+
+    response = client.get(f"{settings.API_V1_STR}/ai/daily-briefings")
+    assert response.status_code == 401
+
 
 def test_daily_briefing_is_grounded_in_dashboard_snapshot(
     client: TestClient,
     superuser_token_headers: dict[str, str],
+    db: Session,
 ) -> None:
     ollama = StubOllamaClient(
         chat_response=json.dumps(
@@ -193,6 +205,8 @@ def test_daily_briefing_is_grounded_in_dashboard_snapshot(
     assert content["report_date"] == "2099-01-01"
     assert content["model"] == "qwen3:4b"
     assert content["headline"] == "Quiet day: focus on stock readiness"
+    assert content["id"]
+    assert content["generated_by_id"]
     assert content["source"]["sales_count"] == 0
     assert content["source"]["revenue"] == "0.00"
     assert content["generated_at"]
@@ -202,6 +216,78 @@ def test_daily_briefing_is_grounded_in_dashboard_snapshot(
     assert ollama.last_messages is not None
     assert "untrusted business data" in ollama.last_messages[0]["content"]
     assert '"report_date":"2099-01-01"' in ollama.last_messages[1]["content"]
+
+    stored = db.get(AIDailyBriefing, uuid.UUID(content["id"]))
+    assert stored is not None
+    assert stored.headline == content["headline"]
+    assert stored.source["report_date"] == "2099-01-01"
+
+
+def test_daily_briefing_latest_and_history_use_saved_results(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    report_date = "2099-02-01"
+    empty_response = client.get(
+        f"{settings.API_V1_STR}/ai/daily-briefing",
+        headers=superuser_token_headers,
+        params={"report_date": report_date},
+    )
+    assert empty_response.status_code == 200
+    assert empty_response.json() is None
+
+    first = _request_briefing(
+        client,
+        superuser_token_headers,
+        StubOllamaClient(
+            chat_response=json.dumps(
+                {
+                    "headline": "First saved briefing",
+                    "summary": "This is the first saved summary.",
+                    "priorities": ["Review the first priority."],
+                    "risks": [],
+                    "opportunities": [],
+                }
+            )
+        ),
+        report_date=report_date,
+    )
+    second = _request_briefing(
+        client,
+        superuser_token_headers,
+        StubOllamaClient(
+            chat_response=json.dumps(
+                {
+                    "headline": "Updated saved briefing",
+                    "summary": "This is the regenerated summary.",
+                    "priorities": ["Review the updated priority."],
+                    "risks": ["Data is limited."],
+                    "opportunities": [],
+                }
+            )
+        ),
+        report_date=report_date,
+    )
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    latest = client.get(
+        f"{settings.API_V1_STR}/ai/daily-briefing",
+        headers=superuser_token_headers,
+        params={"report_date": report_date},
+    )
+    assert latest.status_code == 200
+    assert latest.json()["id"] == second.json()["id"]
+    assert latest.json()["headline"] == "Updated saved briefing"
+
+    history = client.get(
+        f"{settings.API_V1_STR}/ai/daily-briefings",
+        headers=superuser_token_headers,
+        params={"report_date": report_date, "skip": 0, "limit": 1},
+    )
+    assert history.status_code == 200
+    assert history.json()["count"] == 2
+    assert [item["id"] for item in history.json()["data"]] == [second.json()["id"]]
 
 
 def test_daily_briefing_reports_unavailable_ollama(

@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { aiCreateDailyBriefingData, aiCreateDailyBriefingErrors, aiCreateDailyBriefingResponses, aiReadAiStatusData, aiReadAiStatusResponses, dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { aiCreateDailyBriefingData, aiCreateDailyBriefingErrors, aiCreateDailyBriefingResponses, aiReadAiStatusData, aiReadAiStatusResponses, aiReadDailyBriefingHistoryData, aiReadDailyBriefingHistoryErrors, aiReadDailyBriefingHistoryResponses, aiReadLatestDailyBriefingData, aiReadLatestDailyBriefingErrors, aiReadLatestDailyBriefingResponses, dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -300,6 +300,20 @@ export class AiService {
     }
 
     /**
+     * Read Latest Daily Briefing
+     *
+     * Return the latest saved briefing for a business day, if one exists.
+     */
+    public static readLatestDailyBriefing<ThrowOnError extends boolean = true>(options?: Options<aiReadLatestDailyBriefingData, ThrowOnError>) {
+        return (options?.client ?? client).get<aiReadLatestDailyBriefingResponses, aiReadLatestDailyBriefingErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/ai/daily-briefing',
+            ...options
+        });
+    }
+
+    /**
      * Create Daily Briefing
      *
      * Generate a grounded briefing from OpsPilot's deterministic daily metrics.
@@ -309,6 +323,20 @@ export class AiService {
             responseType: 'json',
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/ai/daily-briefing',
+            ...options
+        });
+    }
+
+    /**
+     * Read Daily Briefing History
+     *
+     * List saved briefings newest first, optionally for one business day.
+     */
+    public static readDailyBriefingHistory<ThrowOnError extends boolean = true>(options?: Options<aiReadDailyBriefingHistoryData, ThrowOnError>) {
+        return (options?.client ?? client).get<aiReadDailyBriefingHistoryResponses, aiReadDailyBriefingHistoryErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/ai/daily-briefings',
             ...options
         });
     }

@@ -18,6 +18,14 @@ MONEY_QUANTUM = Decimal("0.01")
 QUANTITY_QUANTUM = Decimal("0.001")
 
 
+def resolve_report_date(report_date: date | None = None) -> date:
+    """Resolve an omitted report date in the configured business timezone."""
+
+    if report_date is not None:
+        return report_date
+    return datetime.now(ZoneInfo(settings.BUSINESS_TIMEZONE)).date()
+
+
 def get_dashboard_summary(
     session: Session,
     *,
@@ -28,7 +36,7 @@ def get_dashboard_summary(
     """Build the deterministic operations snapshot used by the API and AI."""
 
     business_timezone = ZoneInfo(settings.BUSINESS_TIMEZONE)
-    selected_date = report_date or datetime.now(business_timezone).date()
+    selected_date = resolve_report_date(report_date)
     local_start = datetime.combine(
         selected_date,
         time.min,

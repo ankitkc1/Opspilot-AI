@@ -10,10 +10,12 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - Sales recording with automatic stock deductions
 - Daily revenue, sales, top-product, and low-stock dashboard
 - Local Ollama connectivity and model-readiness checks
+- Grounded AI daily briefings with saved history
 - PostgreSQL migrations and automated backend tests
 
-The local AI foundation uses Ollama with `qwen3:4b`. Business-facing AI workflows
-will build on this tested service layer in later milestones.
+The local AI workflow uses Ollama with `qwen3:4b` to turn deterministic dashboard
+metrics into a concise operations briefing without sending business data to a
+hosted model.
 
 ## Architecture
 
@@ -67,6 +69,9 @@ Generate a grounded operations briefing with
 the same business-timezone rules as the dashboard. The model receives only the
 deterministic dashboard snapshot and must return a validated JSON structure;
 unavailable or malformed model responses are rejected with clear API errors.
+Generated briefings are saved for auditability. Use
+`GET /api/v1/ai/daily-briefing` to load the latest saved briefing for a date and
+`GET /api/v1/ai/daily-briefings` to retrieve paginated briefing history.
 
 ## Quality checks
 
