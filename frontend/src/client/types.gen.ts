@@ -5,6 +5,32 @@ export type ClientOptions = {
 };
 
 /**
+ * AIStatusPublic
+ */
+export type AIStatusPublic = {
+    /**
+     * Provider
+     */
+    provider?: 'ollama';
+    /**
+     * Status
+     */
+    status: 'ready' | 'unavailable' | 'model_missing';
+    /**
+     * Model
+     */
+    model: string;
+    /**
+     * Available Models
+     */
+    available_models: Array<string>;
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * Body_login-login_access_token
  */
 export type Body_login_login_access_token = {
@@ -1119,6 +1145,22 @@ export type utilsHealthCheckResponses = {
 };
 
 export type utilsHealthCheckResponse = utilsHealthCheckResponses[keyof utilsHealthCheckResponses];
+
+export type aiReadAiStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/ai/status';
+};
+
+export type aiReadAiStatusResponses = {
+    /**
+     * Successful Response
+     */
+    200: AIStatusPublic;
+};
+
+export type aiReadAiStatusResponse = aiReadAiStatusResponses[keyof aiReadAiStatusResponses];
 
 export type productsReadProductsData = {
     body?: never;

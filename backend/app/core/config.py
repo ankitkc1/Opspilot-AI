@@ -3,7 +3,9 @@ from typing import Literal, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import (
+    AnyHttpUrl,
     EmailStr,
+    Field,
     HttpUrl,
     PostgresDsn,
     computed_field,
@@ -31,6 +33,9 @@ class Settings(BaseSettings):
     PROJECT_NAME: str
     SENTRY_DSN: HttpUrl | None = None
     DATABASE_URL: PostgresDsn
+    OLLAMA_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
+    OLLAMA_MODEL: str = Field(default="qwen3:4b", min_length=1)
+    OLLAMA_TIMEOUT_SECONDS: float = Field(default=120.0, gt=0, le=600)
 
     @field_validator("BUSINESS_TIMEZONE")
     @classmethod

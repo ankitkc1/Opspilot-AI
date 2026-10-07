@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { aiReadAiStatusData, aiReadAiStatusResponses, dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -142,7 +142,7 @@ export class UsersService {
             ...options
         });
     }
-    
+
     /**
      * Read User Me
      *
@@ -156,7 +156,7 @@ export class UsersService {
             ...options
         });
     }
-    
+
     /**
      * Update User Me
      *
@@ -174,7 +174,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Update Password Me
      *
@@ -192,7 +192,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Register User
      *
@@ -209,7 +209,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Delete User
      *
@@ -223,7 +223,7 @@ export class UsersService {
             ...options
         });
     }
-    
+
     /**
      * Read User By Id
      *
@@ -237,7 +237,7 @@ export class UsersService {
             ...options
         });
     }
-    
+
     /**
      * Update User
      *
@@ -271,7 +271,7 @@ export class UtilsService {
             ...options
         });
     }
-    
+
     /**
      * Health Check
      */
@@ -279,6 +279,22 @@ export class UtilsService {
         return (options?.client ?? client).get<utilsHealthCheckResponses, unknown, ThrowOnError>({
             responseType: 'json',
             url: '/api/v1/utils/health-check/',
+            ...options
+        });
+    }
+}
+
+export class AiService {
+    /**
+     * Read Ai Status
+     *
+     * Report whether the configured local Ollama model is ready.
+     */
+    public static readAiStatus<ThrowOnError extends boolean = true>(options?: Options<aiReadAiStatusData, ThrowOnError>) {
+        return (options?.client ?? client).get<aiReadAiStatusResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/ai/status',
             ...options
         });
     }
@@ -298,7 +314,7 @@ export class ProductsService {
             ...options
         });
     }
-    
+
     /**
      * Create Product
      *
@@ -316,7 +332,7 @@ export class ProductsService {
             }
         });
     }
-    
+
     /**
      * Delete Product
      *

@@ -422,6 +422,19 @@ class DashboardSummaryPublic(SQLModel):
     low_stock: list[InventoryBalancePublic]
 
 
+# -------------------------
+# Local AI models
+# -------------------------
+
+
+class AIStatusPublic(SQLModel):
+    provider: Literal["ollama"] = "ollama"
+    status: Literal["ready", "unavailable", "model_missing"]
+    model: str
+    available_models: list[str]
+    message: str
+
+
 # Generic message
 class Message(SQLModel):
     message: str

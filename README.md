@@ -9,9 +9,11 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - Inventory balances and stock movement history
 - Sales recording with automatic stock deductions
 - Daily revenue, sales, top-product, and low-stock dashboard
+- Local Ollama connectivity and model-readiness checks
 - PostgreSQL migrations and automated backend tests
 
-The local AI assistant is the next milestone. It will be added on a separate branch after this core release is reviewed and merged.
+The local AI foundation uses Ollama with `qwen3:4b`. Business-facing AI workflows
+will build on this tested service layer in later milestones.
 
 ## Architecture
 
@@ -41,6 +43,24 @@ Then open:
 - Development email inbox: <http://localhost:8025>
 
 The `changethis` warnings are acceptable only for local development. Replace those values in `.env` before any deployment.
+
+## Local AI
+
+Install Ollama on the host machine and download the configured model once:
+
+```powershell
+ollama pull qwen3:4b
+ollama list
+```
+
+When the backend runs in Docker, it reaches host Ollama through
+`host.docker.internal`. When the backend runs directly on the host, it defaults to
+`http://localhost:11434`. These defaults can be changed with
+`OLLAMA_DOCKER_BASE_URL`, `OLLAMA_MODEL`, and `OLLAMA_TIMEOUT_SECONDS`.
+
+After signing in, check `GET /api/v1/ai/status` in the API documentation. It
+reports `ready`, `model_missing`, or `unavailable`. Automated tests use a mocked
+Ollama transport, so Ollama does not need to be running during the test suite.
 
 ## Quality checks
 
