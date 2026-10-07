@@ -1,20 +1,27 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { isAxiosError } from "axios"
 import type { LucideIcon } from "lucide-react"
 import {
   AlertCircle,
   CalendarDays,
   DollarSign,
+  Lightbulb,
+  ListChecks,
+  LoaderCircle,
   PackageCheck,
   PackageSearch,
   ReceiptText,
   RefreshCw,
+  ShieldAlert,
   ShoppingBasket,
+  Sparkles,
   TrendingUp,
   Trophy,
 } from "lucide-react"
 import { useState } from "react"
 
+import { type AIDailyBriefingPublic, AiService } from "@/client"
 import { client } from "@/client/client.gen"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -95,6 +102,26 @@ function formatQuantity(value: string): string {
   return quantityFormatter.format(Number(value))
 }
 
+function formatGeneratedAt(value?: string): string {
+  if (!value) return "just now"
+
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Sydney",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value))
+}
+
+function getBriefingError(error: unknown): string {
+  if (isAxiosError(error)) {
+    const detail = (error.response?.data as { detail?: unknown } | undefined)
+      ?.detail
+    if (typeof detail === "string") return detail
+  }
+
+  return "The local AI could not create a briefing. Check that Ollama is running, then try again."
+}
+
 async function getDashboardSummary(
   reportDate: string,
 ): Promise<DashboardSummary> {
@@ -161,6 +188,178 @@ function DashboardSkeleton() {
   )
 }
 
+type BriefingListProps = {
+  title: string
+  items: string[]
+  emptyMessage: string
+  icon: LucideIcon
+  iconClassName: string
+}
+
+function BriefingList({
+  title,
+  items,
+  emptyMessage,
+  icon: Icon,
+  iconClassName,
+}: BriefingListProps) {
+  return (
+    <div className="rounded-xl border bg-background/70 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Icon className={cn("size-4", iconClassName)} />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      {items.length > 0 ? (
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          {items.map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-current" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+      )}
+    </div>
+  )
+}
+
+type DailyBriefingProps = {
+  briefing?: AIDailyBriefingPublic
+  error: unknown
+  isPending: boolean
+  onGenerate: () => void
+}
+
+function DailyBriefing({
+  briefing,
+  error,
+  isPending,
+  onGenerate,
+}: DailyBriefingProps) {
+  return (
+    <Card className="overflow-hidden border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-background to-background">
+      <CardHeader className="border-b border-violet-500/15">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-violet-500/15 p-2.5 text-violet-600 dark:text-violet-400">
+              <Sparkles className="size-5" />
+            </div>
+            <div>
+              <CardTitle>AI daily briefing</CardTitle>
+              <CardDescription>
+                A grounded action plan from the selected day's operations data
+              </CardDescription>
+            </div>
+          </div>
+          <Button
+            className="shrink-0"
+            onClick={onGenerate}
+            disabled={isPending}
+          >
+            {isPending ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Sparkles />
+            )}
+            {isPending
+              ? "Generating..."
+              : briefing
+                ? "Regenerate"
+                : "Generate briefing"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Briefing unavailable</AlertTitle>
+            <AlertDescription>{getBriefingError(error)}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {isPending ? (
+          <div className="space-y-4" aria-live="polite">
+            <div>
+              <p className="font-medium">Analysing the daily snapshot</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your local model is preparing priorities, risks, and
+                opportunities. This can take up to a minute.
+              </p>
+            </div>
+            <Skeleton className="h-7 w-2/3" />
+            <Skeleton className="h-16 w-full" />
+            <div className="grid gap-3 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="h-32" />
+              ))}
+            </div>
+          </div>
+        ) : briefing ? (
+          <div className="space-y-5">
+            <div>
+              <Badge className="mb-3" variant="secondary">
+                Local AI
+              </Badge>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {briefing.headline}
+              </h2>
+              <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">
+                {briefing.summary}
+              </p>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-3">
+              <BriefingList
+                title="Priorities"
+                items={briefing.priorities}
+                emptyMessage="No immediate priorities identified."
+                icon={ListChecks}
+                iconClassName="text-sky-600 dark:text-sky-400"
+              />
+              <BriefingList
+                title="Risks"
+                items={briefing.risks}
+                emptyMessage="No specific risks identified."
+                icon={ShieldAlert}
+                iconClassName="text-rose-600 dark:text-rose-400"
+              />
+              <BriefingList
+                title="Opportunities"
+                items={briefing.opportunities}
+                emptyMessage="No specific opportunities identified."
+                icon={Lightbulb}
+                iconClassName="text-amber-600 dark:text-amber-400"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Generated locally with {briefing.model} at{" "}
+              {formatGeneratedAt(briefing.generated_at)}. Verify important
+              decisions against the source data below.
+            </p>
+          </div>
+        ) : (
+          <div className="flex min-h-40 flex-col items-center justify-center text-center">
+            <div className="mb-4 rounded-full bg-violet-500/10 p-4">
+              <Sparkles className="size-7 text-violet-600 dark:text-violet-400" />
+            </div>
+            <p className="font-medium">
+              Turn today's numbers into an action plan
+            </p>
+            <p className="mt-1 max-w-lg text-sm text-muted-foreground">
+              OpsPilot sends only this dashboard snapshot to your private,
+              locally running AI model.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
   head: () => ({
@@ -178,6 +377,19 @@ function Dashboard() {
     queryKey: ["dashboard-summary", reportDate],
     queryFn: () => getDashboardSummary(reportDate),
   })
+  const briefingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await AiService.createDailyBriefing({
+        query: { report_date: reportDate },
+      })
+      return response.data
+    },
+  })
+
+  const briefing =
+    briefingMutation.data?.report_date === data?.report_date
+      ? briefingMutation.data
+      : undefined
 
   const maxProductRevenue = Math.max(
     ...(data?.top_products ?? []).map((product) => Number(product.revenue)),
@@ -211,13 +423,19 @@ function Dashboard() {
                 className="w-full bg-background/80 pl-9 sm:w-44"
                 type="date"
                 value={reportDate}
-                onChange={(event) => setReportDate(event.target.value)}
+                onChange={(event) => {
+                  briefingMutation.reset()
+                  setReportDate(event.target.value)
+                }}
               />
             </div>
             <Button
               variant="outline"
               className="bg-background/80"
-              onClick={() => refetch()}
+              onClick={() => {
+                briefingMutation.reset()
+                void refetch()
+              }}
               disabled={isFetching}
             >
               <RefreshCw className={cn(isFetching && "animate-spin")} />
@@ -288,6 +506,13 @@ function Dashboard() {
               iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-400"
             />
           </section>
+
+          <DailyBriefing
+            briefing={briefing}
+            error={briefingMutation.error}
+            isPending={briefingMutation.isPending}
+            onGenerate={() => briefingMutation.mutate()}
+          />
 
           <section className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
             <Card>
