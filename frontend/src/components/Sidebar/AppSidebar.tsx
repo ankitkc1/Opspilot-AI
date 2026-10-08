@@ -1,5 +1,6 @@
 import {
   Boxes,
+  CalendarRange,
   History,
   LayoutDashboard,
   ListChecks,
@@ -25,6 +26,7 @@ const baseItems: Item[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/" },
   { icon: TrendingUp, title: "Trends", path: "/trends" },
   { icon: History, title: "Briefings", path: "/briefings" },
+  { icon: CalendarRange, title: "Weekly reviews", path: "/weekly-reviews" },
   { icon: ListChecks, title: "Actions", path: "/actions" },
   { icon: PackageOpen, title: "Products", path: "/products" },
   { icon: Boxes, title: "Inventory", path: "/inventory" },

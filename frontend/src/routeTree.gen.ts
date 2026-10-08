@@ -23,6 +23,7 @@ import { Route as LayoutProductsRouteImport } from './routes/_layout/products'
 import { Route as LayoutSalesRouteImport } from './routes/_layout/sales'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutTrendsRouteImport } from './routes/_layout/trends'
+import { Route as LayoutWeeklyReviewsRouteImport } from './routes/_layout/weekly-reviews'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -93,6 +94,11 @@ const LayoutTrendsRoute = LayoutTrendsRouteImport.update({
   path: '/trends',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutWeeklyReviewsRoute = LayoutWeeklyReviewsRouteImport.update({
+  id: '/weekly-reviews',
+  path: '/weekly-reviews',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/sales': typeof LayoutSalesRoute
   '/settings': typeof LayoutSettingsRoute
   '/trends': typeof LayoutTrendsRoute
+  '/weekly-reviews': typeof LayoutWeeklyReviewsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/sales': typeof LayoutSalesRoute
   '/settings': typeof LayoutSettingsRoute
   '/trends': typeof LayoutTrendsRoute
+  '/weekly-reviews': typeof LayoutWeeklyReviewsRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/_layout/sales': typeof LayoutSalesRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/trends': typeof LayoutTrendsRoute
+  '/_layout/weekly-reviews': typeof LayoutWeeklyReviewsRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/sales'
     | '/settings'
     | '/trends'
+    | '/weekly-reviews'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/sales'
     | '/settings'
     | '/trends'
+    | '/weekly-reviews'
     | '/'
   id:
     | '__root__'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/_layout/sales'
     | '/_layout/settings'
     | '/_layout/trends'
+    | '/_layout/weekly-reviews'
     | '/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -298,6 +310,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutTrendsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/weekly-reviews': {
+      id: '/_layout/weekly-reviews'
+      path: '/weekly-reviews'
+      fullPath: '/weekly-reviews'
+      preLoaderRoute: typeof LayoutWeeklyReviewsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -310,6 +329,7 @@ interface LayoutRouteChildren {
   LayoutSalesRoute: typeof LayoutSalesRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutTrendsRoute: typeof LayoutTrendsRoute
+  LayoutWeeklyReviewsRoute: typeof LayoutWeeklyReviewsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
@@ -322,6 +342,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSalesRoute: LayoutSalesRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutTrendsRoute: LayoutTrendsRoute,
+  LayoutWeeklyReviewsRoute: LayoutWeeklyReviewsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 
