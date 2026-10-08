@@ -383,6 +383,124 @@ function ActionEditor({
   )
 }
 
+function CompleteActionDialog({
+  action,
+  error,
+  isSaving,
+  onOpenChange,
+  onComplete,
+}: {
+  action: ActionItemPublic | null
+  error: unknown
+  isSaving: boolean
+  onOpenChange: (open: boolean) => void
+  onComplete: (note: string) => void
+}) {
+  const [note, setNote] = useState("")
+  const [formError, setFormError] = useState<string | null>(null)
+  const isEditing = Boolean(action?.outcome_note)
+
+  useEffect(() => {
+    if (action) {
+      setNote(action.outcome_note ?? "")
+      setFormError(null)
+    }
+  }, [action])
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const outcomeNote = note.trim()
+    if (!outcomeNote) {
+      setFormError("Outcome note is required.")
+      return
+    }
+    setFormError(null)
+    onComplete(outcomeNote)
+  }
+
+  return (
+    <Dialog
+      open={Boolean(action)}
+      onOpenChange={(nextOpen) => {
+        if (!isSaving) {
+          onOpenChange(nextOpen)
+          if (!nextOpen) {
+            setNote("")
+            setFormError(null)
+          }
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={submit}>
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit completion outcome" : "Complete action"}
+            </DialogTitle>
+            <DialogDescription>
+              Record what happened before closing this action.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-5">
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm font-medium">
+              {action?.title}
+            </div>
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="action-outcome-note">Outcome</Label>
+                <span className="text-xs text-muted-foreground">
+                  {note.length}/1000
+                </span>
+              </div>
+              <textarea
+                id="action-outcome-note"
+                autoFocus
+                maxLength={1000}
+                rows={5}
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="What changed, what was confirmed, or what still needs follow-up?"
+                className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive min-h-28 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+                aria-invalid={Boolean(formError || error)}
+              />
+            </div>
+
+            {formError || error ? (
+              <Alert variant="destructive">
+                <AlertCircle />
+                <AlertTitle>Action not completed</AlertTitle>
+                <AlertDescription>
+                  {formError ?? getErrorMessage(error)}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <CircleCheck />
+              )}
+              {isEditing ? "Save outcome" : "Complete action"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 type ActionSource =
   | { kind: "daily"; data: AIDailyBriefingPublic }
   | { kind: "weekly"; data: AIWeeklyReviewPublic }
@@ -530,6 +648,8 @@ function Actions() {
   const [sourceAction, setSourceAction] = useState<ActionItemPublic | null>(
     null,
   )
+  const [completionAction, setCompletionAction] =
+    useState<ActionItemPublic | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
 
@@ -557,9 +677,13 @@ function Actions() {
       })
       return response.data
     },
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({ queryKey: actionsQueryKey })
-      toast.success("Action updated")
+      toast.success(
+        variables.payload.status === "completed"
+          ? "Action completed"
+          : "Action updated",
+      )
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -775,6 +899,39 @@ function Actions() {
                             {action.description}
                           </p>
                         ) : null}
+                        {action.outcome_note ? (
+                          <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                                <CircleCheck className="size-4" />
+                                {action.status === "completed"
+                                  ? "Completion outcome"
+                                  : "Previous outcome"}
+                              </p>
+                              {action.status === "completed" ? (
+                                <Button
+                                  className="h-auto px-1 py-0 text-xs"
+                                  size="sm"
+                                  variant="link"
+                                  onClick={() => {
+                                    updateMutation.reset()
+                                    setCompletionAction(action)
+                                  }}
+                                >
+                                  Edit outcome
+                                </Button>
+                              ) : null}
+                            </div>
+                            <p className="mt-2 text-sm leading-6">
+                              {action.outcome_note}
+                            </p>
+                            {action.completed_at ? (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Completed {formatDateTime(action.completed_at)}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="flex shrink-0 gap-1">
                         <Button
@@ -836,12 +993,20 @@ function Actions() {
                       <Select
                         value={action.status}
                         disabled={updateMutation.isPending}
-                        onValueChange={(value: ActionStatus) =>
+                        onValueChange={(value: ActionStatus) => {
+                          if (
+                            value === "completed" &&
+                            action.status !== "completed"
+                          ) {
+                            updateMutation.reset()
+                            setCompletionAction(action)
+                            return
+                          }
                           updateMutation.mutate({
                             actionId: action.id,
                             payload: { status: value },
                           })
-                        }
+                        }}
                       >
                         <SelectTrigger className="w-full sm:w-40" size="sm">
                           <SelectValue />
@@ -876,6 +1041,27 @@ function Actions() {
         action={sourceAction}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setSourceAction(null)
+        }}
+      />
+      <CompleteActionDialog
+        action={completionAction}
+        error={updateMutation.error}
+        isSaving={updateMutation.isPending}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setCompletionAction(null)
+            updateMutation.reset()
+          }
+        }}
+        onComplete={(note) => {
+          if (!completionAction) return
+          updateMutation.mutate(
+            {
+              actionId: completionAction.id,
+              payload: { status: "completed", outcome_note: note },
+            },
+            { onSuccess: () => setCompletionAction(null) },
+          )
         }}
       />
     </div>

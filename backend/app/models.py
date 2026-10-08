@@ -618,6 +618,7 @@ class ActionItemUpdate(SQLModel):
     priority: ActionPriority | None = None
     status: ActionStatus | None = None
     due_date: date | None = None
+    outcome_note: str | None = Field(default=None, min_length=1, max_length=1000)
 
     @model_validator(mode="after")
     def reject_null_required_fields(self) -> Self:
@@ -714,6 +715,7 @@ class ActionItem(SQLModel, table=True):
         default=None,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
+    outcome_note: str | None = Field(default=None, max_length=1000)
 
 
 class ActionItemPublic(ActionItemContent):
@@ -728,6 +730,7 @@ class ActionItemPublic(ActionItemContent):
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None
+    outcome_note: str | None
 
 
 class ActionItemsPublic(SQLModel):

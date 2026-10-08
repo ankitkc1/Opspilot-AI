@@ -243,7 +243,20 @@ def update_action(
 
     action = _get_owned_action(session, current_user, action_id)
     update_data = action_in.model_dump(exclude_unset=True)
+    if "outcome_note" in update_data:
+        outcome_note = update_data["outcome_note"]
+        normalized_outcome_note = (
+            outcome_note.strip() if outcome_note is not None else None
+        )
+        update_data["outcome_note"] = normalized_outcome_note or None
     next_status = update_data.get("status", action.status)
+    next_outcome_note = update_data.get("outcome_note", action.outcome_note)
+
+    if next_status == "completed" and not next_outcome_note:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="A completion outcome note is required",
+        )
 
     if next_status == "completed" and action.status != "completed":
         action.completed_at = get_datetime_utc()

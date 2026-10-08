@@ -254,6 +254,10 @@ export type ActionItemPublic = {
      * Completed A
      */
     completed_at: string | null;
+    /**
+     * Outcome Note
+     */
+    outcome_note: string | null;
 };
 
 /**
@@ -284,6 +288,10 @@ export type ActionItemUpdate = {
      * Due Date
      */
     due_date?: string | null;
+    /**
+     * Outcome Note
+     */
+    outcome_note?: string | null;
 };
 
 /**

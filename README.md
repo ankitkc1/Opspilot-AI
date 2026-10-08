@@ -14,7 +14,7 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - Grounded AI daily briefings with saved history
 - Grounded AI weekly operations reviews with saved trend snapshots
 - Searchable daily and weekly AI audit history with original source metrics
-- User-approved AI action tracking with daily and weekly source traceability
+- User-approved AI action tracking with source traceability and completion outcomes
 - PostgreSQL migrations and automated backend tests
 
 The local AI workflow uses Ollama with `qwen3:4b` to turn deterministic dashboard
@@ -80,7 +80,9 @@ Generated briefings are saved for auditability. Use
 Briefing priorities, risks, and opportunities can be added to the Action Center
 only after a user approves them. Actions remain linked to their source briefing,
 are private to their creator, and support open, in-progress, completed, and
-dismissed states through the authenticated `/api/v1/actions/` API.
+dismissed states through the authenticated `/api/v1/actions/` API. Completing
+an action requires a short outcome note so OpsPilot retains what actually
+happened, not only the original recommendation.
 
 ## Quality checks
 

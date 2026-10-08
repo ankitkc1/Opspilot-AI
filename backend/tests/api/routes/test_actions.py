@@ -144,6 +144,7 @@ def test_create_action_links_saved_briefing(
     assert content["source_suggestion"] == "Review the low-stock list"
     assert content["created_by_id"]
     assert content["completed_at"] is None
+    assert content["outcome_note"] is None
 
     stored = db.get(ActionItem, uuid.UUID(content["id"]))
     assert stored is not None
@@ -469,12 +470,19 @@ def test_update_action_tracks_completion_and_filters(
     completed = client.patch(
         f"{settings.API_V1_STR}/actions/{action_id}",
         headers=superuser_token_headers,
-        json={"status": "completed", "priority": "high"},
+        json={
+            "status": "completed",
+            "priority": "high",
+            "outcome_note": "  Supplier order was confirmed for Friday.  ",
+        },
     )
     assert completed.status_code == 200
     assert completed.json()["status"] == "completed"
     assert completed.json()["priority"] == "high"
     assert completed.json()["completed_at"] is not None
+    assert completed.json()["outcome_note"] == (
+        "Supplier order was confirmed for Friday."
+    )
 
     filtered = client.get(
         f"{settings.API_V1_STR}/actions/",
@@ -491,6 +499,66 @@ def test_update_action_tracks_completion_and_filters(
     )
     assert reopened.status_code == 200
     assert reopened.json()["completed_at"] is None
+    assert reopened.json()["outcome_note"] == (
+        "Supplier order was confirmed for Friday."
+    )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"status": "completed"},
+        {"status": "completed", "outcome_note": "   "},
+    ],
+)
+def test_update_action_requires_completion_outcome_note(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    payload: dict[str, object],
+) -> None:
+    created = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(),
+    )
+
+    completed = client.patch(
+        f"{settings.API_V1_STR}/actions/{created.json()['id']}",
+        headers=superuser_token_headers,
+        json=payload,
+    )
+
+    assert completed.status_code == 422
+    assert completed.json()["detail"] == "A completion outcome note is required"
+
+
+def test_update_action_edits_completed_outcome_note(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(),
+    )
+    action_id = created.json()["id"]
+    completed = client.patch(
+        f"{settings.API_V1_STR}/actions/{action_id}",
+        headers=superuser_token_headers,
+        json={"status": "completed", "outcome_note": "Order submitted."},
+    )
+    assert completed.status_code == 200
+
+    updated = client.patch(
+        f"{settings.API_V1_STR}/actions/{action_id}",
+        headers=superuser_token_headers,
+        json={"outcome_note": "Order confirmed for Friday delivery."},
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["outcome_note"] == (
+        "Order confirmed for Friday delivery."
+    )
 
 
 def test_update_action_edits_operational_fields(
