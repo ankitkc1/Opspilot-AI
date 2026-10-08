@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from typing import Literal, Self
 
@@ -465,6 +465,9 @@ class AIStatusPublic(SQLModel):
     message: str
 
 
+AIGenerationMode = Literal["manual", "automation"]
+
+
 class AIDailyBriefingContent(SQLModel):
     headline: str = Field(min_length=1, max_length=120)
     summary: str = Field(min_length=1, max_length=600)
@@ -475,6 +478,10 @@ class AIDailyBriefingContent(SQLModel):
 
 class AIDailyBriefing(AIDailyBriefingContent, table=True):
     __table_args__ = (
+        CheckConstraint(
+            "generation_mode IN ('manual', 'automation')",
+            name="ck_aidailybriefing_generation_mode",
+        ),
         Index(
             "ix_aidailybriefing_report_date_generated_at",
             "report_date",
@@ -492,6 +499,7 @@ class AIDailyBriefing(AIDailyBriefingContent, table=True):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     model: str = Field(max_length=100)
+    generation_mode: str = Field(default="manual", max_length=20)
     source: dict[str, object] = Field(sa_type=JSON)
     generated_by_id: uuid.UUID | None = Field(
         default=None,
@@ -506,6 +514,7 @@ class AIDailyBriefingPublic(AIDailyBriefingContent):
     report_date: date
     generated_at: datetime
     model: str
+    generation_mode: AIGenerationMode
     source: DashboardSummaryPublic
     generated_by_id: uuid.UUID | None
 
@@ -565,6 +574,102 @@ class AIWeeklyReviewPublic(AIWeeklyReviewContent):
 class AIWeeklyReviewsPublic(SQLModel):
     data: list[AIWeeklyReviewPublic]
     count: int
+
+
+# -------------------------
+# AI automation models
+# -------------------------
+
+
+AIAutomationTrigger = Literal["manual", "scheduled"]
+AIAutomationRunStatus = Literal["running", "succeeded", "failed"]
+
+
+class AIAutomationSetting(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE",
+        unique=True,
+        index=True,
+    )
+    daily_briefing_enabled: bool = False
+    daily_briefing_time: time = Field(default=time(hour=8))
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    updated_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class AIDailyAutomationUpdate(SQLModel):
+    enabled: bool | None = None
+    run_time: time | None = None
+
+
+class AIAutomationRun(SQLModel, table=True):
+    __table_args__ = (
+        CheckConstraint(
+            "trigger IN ('manual', 'scheduled')",
+            name="ck_aiautomationrun_trigger",
+        ),
+        CheckConstraint(
+            "status IN ('running', 'succeeded', 'failed')",
+            name="ck_aiautomationrun_status",
+        ),
+        Index(
+            "ix_aiautomationrun_user_started_at",
+            "user_id",
+            "started_at",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    run_key: str = Field(unique=True, index=True, max_length=255)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE",
+        index=True,
+    )
+    trigger: str = Field(max_length=20)
+    status: str = Field(default="running", max_length=20)
+    scheduled_for: date
+    started_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    completed_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    briefing_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="aidailybriefing.id",
+        ondelete="SET NULL",
+    )
+    error: str | None = Field(default=None, max_length=1000)
+
+
+class AIAutomationRunPublic(SQLModel):
+    id: uuid.UUID
+    trigger: AIAutomationTrigger
+    status: AIAutomationRunStatus
+    scheduled_for: date
+    started_at: datetime
+    completed_at: datetime | None
+    briefing_id: uuid.UUID | None
+    error: str | None
+
+
+class AIDailyAutomationPublic(SQLModel):
+    enabled: bool
+    run_time: time
+    timezone: str
+    next_run_at: datetime | None
+    last_run: AIAutomationRunPublic | None
 
 
 # -------------------------

@@ -1,4 +1,5 @@
 import {
+  Bot,
   Boxes,
   CalendarRange,
   History,
@@ -28,6 +29,7 @@ const baseItems: Item[] = [
   { icon: History, title: "Briefings", path: "/briefings" },
   { icon: CalendarRange, title: "Weekly reviews", path: "/weekly-reviews" },
   { icon: ListChecks, title: "Actions", path: "/actions" },
+  { icon: Bot, title: "Automation", path: "/automation" },
   { icon: PackageOpen, title: "Products", path: "/products" },
   { icon: Boxes, title: "Inventory", path: "/inventory" },
   { icon: ShoppingCart, title: "Sales", path: "/sales" },

@@ -242,6 +242,7 @@ def test_daily_briefing_is_grounded_in_dashboard_snapshot(
     content = response.json()
     assert content["report_date"] == "2099-01-01"
     assert content["model"] == "qwen3:4b"
+    assert content["generation_mode"] == "manual"
     assert content["headline"] == "Quiet day: focus on stock readiness"
     assert content["id"]
     assert content["generated_by_id"]

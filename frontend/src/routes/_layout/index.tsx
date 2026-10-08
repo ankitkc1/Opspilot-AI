@@ -373,7 +373,11 @@ function DailyBriefing({
           <div className="space-y-5">
             <div>
               <div className="mb-3 flex flex-wrap gap-2">
-                <Badge variant="secondary">Local AI · Saved</Badge>
+                <Badge variant="secondary">
+                  {briefing.generation_mode === "automation"
+                    ? "Automated · Saved"
+                    : "Local AI · Saved"}
+                </Badge>
                 {isStale ? (
                   <Badge
                     className="border-amber-500/40 text-amber-700 dark:text-amber-300"

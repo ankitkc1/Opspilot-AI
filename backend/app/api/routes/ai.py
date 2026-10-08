@@ -5,11 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    AIAutomationRunPublic,
+    AIDailyAutomationPublic,
+    AIDailyAutomationUpdate,
     AIDailyBriefingPublic,
     AIDailyBriefingsPublic,
     AIStatusPublic,
     AIWeeklyReviewPublic,
     AIWeeklyReviewsPublic,
+)
+from app.services.ai_automation import (
+    execute_daily_briefing_automation,
+    get_daily_automation_public,
+    update_daily_automation,
 )
 from app.services.ai_briefing import (
     AIBriefingResponseError,
@@ -136,6 +144,57 @@ def read_daily_briefing_history(
         report_date=report_date,
         skip=skip,
         limit=limit,
+    )
+
+
+@router.get(
+    "/automation/daily-briefing",
+    response_model=AIDailyAutomationPublic,
+)
+def read_daily_briefing_automation(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> AIDailyAutomationPublic:
+    """Return the current user's daily briefing automation schedule."""
+
+    return get_daily_automation_public(session, user_id=current_user.id)
+
+
+@router.patch(
+    "/automation/daily-briefing",
+    response_model=AIDailyAutomationPublic,
+)
+def update_daily_briefing_automation(
+    session: SessionDep,
+    current_user: CurrentUser,
+    automation_in: AIDailyAutomationUpdate,
+) -> AIDailyAutomationPublic:
+    """Enable, disable, or reschedule automatic daily briefings."""
+
+    update_daily_automation(
+        session,
+        user_id=current_user.id,
+        automation_in=automation_in,
+    )
+    return get_daily_automation_public(session, user_id=current_user.id)
+
+
+@router.post(
+    "/automation/daily-briefing/run",
+    response_model=AIAutomationRunPublic,
+)
+def run_daily_briefing_automation(
+    session: SessionDep,
+    current_user: CurrentUser,
+    ollama: OllamaClientDep,
+) -> AIAutomationRunPublic:
+    """Run the approved daily briefing automation immediately."""
+
+    return execute_daily_briefing_automation(
+        session,
+        user_id=current_user.id,
+        ollama=ollama,
+        trigger="manual",
     )
 
 

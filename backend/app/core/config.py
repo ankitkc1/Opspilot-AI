@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     OLLAMA_MODEL: str = Field(default="qwen3:4b", min_length=1)
     OLLAMA_TIMEOUT_SECONDS: float = Field(default=120.0, gt=0, le=600)
+    AI_AUTOMATION_POLL_SECONDS: float = Field(default=30.0, ge=5, le=3600)
 
     @field_validator("BUSINESS_TIMEZONE")
     @classmethod

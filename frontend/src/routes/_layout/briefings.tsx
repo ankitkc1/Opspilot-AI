@@ -158,6 +158,9 @@ function BriefingDetails({
             <Badge variant="secondary">
               {formatReportDate(briefing.report_date)}
             </Badge>
+            {briefing.generation_mode === "automation" ? (
+              <Badge>Automated</Badge>
+            ) : null}
             <Badge variant="outline">{briefing.model}</Badge>
           </div>
           <DialogTitle className="text-xl leading-7">
@@ -443,6 +446,9 @@ function BriefingHistory() {
                     <Badge variant="secondary">
                       {formatReportDate(briefing.report_date)}
                     </Badge>
+                    {briefing.generation_mode === "automation" ? (
+                      <Badge>Automated</Badge>
+                    ) : null}
                     <Badge variant="outline">{briefing.model}</Badge>
                   </div>
                   <h2 className="mt-4 text-lg font-semibold leading-7">

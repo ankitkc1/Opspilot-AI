@@ -2,7 +2,7 @@
 
 import { type Client, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { actionsCreateActionData, actionsCreateActionErrors, actionsCreateActionResponses, actionsDeleteActionData, actionsDeleteActionErrors, actionsDeleteActionResponses, actionsReadActionData, actionsReadActionErrors, actionsReadActionResponses, actionsReadActionsData, actionsReadActionsErrors, actionsReadActionSourceBriefingData, actionsReadActionSourceBriefingErrors, actionsReadActionSourceBriefingResponses, actionsReadActionSourceWeeklyReviewData, actionsReadActionSourceWeeklyReviewErrors, actionsReadActionSourceWeeklyReviewResponses, actionsReadActionsResponses, actionsUpdateActionData, actionsUpdateActionErrors, actionsUpdateActionResponses, aiCreateDailyBriefingData, aiCreateDailyBriefingErrors, aiCreateDailyBriefingResponses, aiCreateWeeklyReviewData, aiCreateWeeklyReviewErrors, aiCreateWeeklyReviewResponses, aiReadAiStatusData, aiReadAiStatusResponses, aiReadDailyBriefingHistoryData, aiReadDailyBriefingHistoryErrors, aiReadDailyBriefingHistoryResponses, aiReadLatestDailyBriefingData, aiReadLatestDailyBriefingErrors, aiReadLatestDailyBriefingResponses, aiReadLatestWeeklyReviewData, aiReadLatestWeeklyReviewErrors, aiReadLatestWeeklyReviewResponses, aiReadWeeklyReviewHistoryData, aiReadWeeklyReviewHistoryErrors, aiReadWeeklyReviewHistoryResponses, dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, dashboardReadDashboardTrendsData, dashboardReadDashboardTrendsErrors, dashboardReadDashboardTrendsResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
+import type { actionsCreateActionData, actionsCreateActionErrors, actionsCreateActionResponses, actionsDeleteActionData, actionsDeleteActionErrors, actionsDeleteActionResponses, actionsReadActionData, actionsReadActionErrors, actionsReadActionResponses, actionsReadActionsData, actionsReadActionsErrors, actionsReadActionSourceBriefingData, actionsReadActionSourceBriefingErrors, actionsReadActionSourceBriefingResponses, actionsReadActionSourceWeeklyReviewData, actionsReadActionSourceWeeklyReviewErrors, actionsReadActionSourceWeeklyReviewResponses, actionsReadActionsResponses, actionsUpdateActionData, actionsUpdateActionErrors, actionsUpdateActionResponses, aiCreateDailyBriefingData, aiCreateDailyBriefingErrors, aiCreateDailyBriefingResponses, aiCreateWeeklyReviewData, aiCreateWeeklyReviewErrors, aiCreateWeeklyReviewResponses, aiReadAiStatusData, aiReadAiStatusResponses, aiReadDailyBriefingAutomationData, aiReadDailyBriefingAutomationResponses, aiReadDailyBriefingHistoryData, aiReadDailyBriefingHistoryErrors, aiReadDailyBriefingHistoryResponses, aiReadLatestDailyBriefingData, aiReadLatestDailyBriefingErrors, aiReadLatestDailyBriefingResponses, aiReadLatestWeeklyReviewData, aiReadLatestWeeklyReviewErrors, aiReadLatestWeeklyReviewResponses, aiReadWeeklyReviewHistoryData, aiReadWeeklyReviewHistoryErrors, aiReadWeeklyReviewHistoryResponses, aiRunDailyBriefingAutomationData, aiRunDailyBriefingAutomationResponses, aiUpdateDailyBriefingAutomationData, aiUpdateDailyBriefingAutomationErrors, aiUpdateDailyBriefingAutomationResponses, dashboardReadDashboardSummaryData, dashboardReadDashboardSummaryErrors, dashboardReadDashboardSummaryResponses, dashboardReadDashboardTrendsData, dashboardReadDashboardTrendsErrors, dashboardReadDashboardTrendsResponses, inventoryCreateInventoryMovementData, inventoryCreateInventoryMovementErrors, inventoryCreateInventoryMovementResponses, inventoryReadInventoryBalanceData, inventoryReadInventoryBalanceErrors, inventoryReadInventoryBalanceResponses, inventoryReadInventoryBalancesData, inventoryReadInventoryBalancesErrors, inventoryReadInventoryBalancesResponses, inventoryReadInventoryMovementsData, inventoryReadInventoryMovementsErrors, inventoryReadInventoryMovementsResponses, inventoryReadLowStockProductsData, inventoryReadLowStockProductsErrors, inventoryReadLowStockProductsResponses, loginLoginAccessTokenData, loginLoginAccessTokenErrors, loginLoginAccessTokenResponses, loginRecoverPasswordData, loginRecoverPasswordErrors, loginRecoverPasswordHtmlContentData, loginRecoverPasswordHtmlContentErrors, loginRecoverPasswordHtmlContentResponses, loginRecoverPasswordResponses, loginResetPasswordData, loginResetPasswordErrors, loginResetPasswordResponses, loginTestTokenData, loginTestTokenResponses, privateCreateUserData, privateCreateUserErrors, privateCreateUserResponses, productsCreateProductData, productsCreateProductErrors, productsCreateProductResponses, productsDeleteProductData, productsDeleteProductErrors, productsDeleteProductResponses, productsReadProductData, productsReadProductErrors, productsReadProductResponses, productsReadProductsData, productsReadProductsErrors, productsReadProductsResponses, productsUpdateProductData, productsUpdateProductErrors, productsUpdateProductResponses, salesCreateSaleData, salesCreateSaleErrors, salesCreateSaleResponses, salesReadSaleData, salesReadSaleErrors, salesReadSaleResponses, salesReadSalesData, salesReadSalesErrors, salesReadSalesResponses, usersCreateUserData, usersCreateUserErrors, usersCreateUserResponses, usersDeleteUserData, usersDeleteUserErrors, usersDeleteUserMeData, usersDeleteUserMeResponses, usersDeleteUserResponses, usersReadUserByIdData, usersReadUserByIdErrors, usersReadUserByIdResponses, usersReadUserMeData, usersReadUserMeResponses, usersReadUsersData, usersReadUsersErrors, usersReadUsersResponses, usersRegisterUserData, usersRegisterUserErrors, usersRegisterUserResponses, usersUpdatePasswordMeData, usersUpdatePasswordMeErrors, usersUpdatePasswordMeResponses, usersUpdateUserData, usersUpdateUserErrors, usersUpdateUserMeData, usersUpdateUserMeErrors, usersUpdateUserMeResponses, usersUpdateUserResponses, utilsHealthCheckData, utilsHealthCheckResponses, utilsTestEmailData, utilsTestEmailErrors, utilsTestEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -82,7 +82,7 @@ export class LoginService {
     }
 
     /**
-     * Recover Password Html Conten
+     * Recover Password Html Content
      *
      * HTML Content for Password Recovery
      */
@@ -449,6 +449,52 @@ export class AiService {
     }
 
     /**
+     * Read Daily Briefing Automation
+     *
+     * Return the current user's daily briefing automation schedule.
+     */
+    public static readDailyBriefingAutomation<ThrowOnError extends boolean = true>(options?: Options<aiReadDailyBriefingAutomationData, ThrowOnError>) {
+        return (options?.client ?? client).get<aiReadDailyBriefingAutomationResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/ai/automation/daily-briefing',
+            ...options
+        });
+    }
+
+    /**
+     * Update Daily Briefing Automation
+     *
+     * Enable, disable, or reschedule automatic daily briefings.
+     */
+    public static updateDailyBriefingAutomation<ThrowOnError extends boolean = true>(options: Options<aiUpdateDailyBriefingAutomationData, ThrowOnError>) {
+        return (options.client ?? client).patch<aiUpdateDailyBriefingAutomationResponses, aiUpdateDailyBriefingAutomationErrors, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/ai/automation/daily-briefing',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+
+    /**
+     * Run Daily Briefing Automation
+     *
+     * Run the approved daily briefing automation immediately.
+     */
+    public static runDailyBriefingAutomation<ThrowOnError extends boolean = true>(options?: Options<aiRunDailyBriefingAutomationData, ThrowOnError>) {
+        return (options?.client ?? client).post<aiRunDailyBriefingAutomationResponses, unknown, ThrowOnError>({
+            responseType: 'json',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/ai/automation/daily-briefing/run',
+            ...options
+        });
+    }
+
+    /**
      * Read Latest Weekly Review
      *
      * Return the latest saved weekly review for a period end date.
@@ -507,7 +553,7 @@ export class ProductsService {
     }
 
     /**
-     * Create Produc
+     * Create Product
      *
      * Create a new product.
      */
@@ -525,7 +571,7 @@ export class ProductsService {
     }
 
     /**
-     * Delete Produc
+     * Delete Product
      *
      * Delete a product.
      */
@@ -539,7 +585,7 @@ export class ProductsService {
     }
 
     /**
-     * Read Produc
+     * Read Product
      *
      * Retrieve a product by ID.
      */
@@ -553,7 +599,7 @@ export class ProductsService {
     }
 
     /**
-     * Update Produc
+     * Update Product
      *
      * Update a product.
      */
@@ -635,7 +681,7 @@ export class InventoryService {
     }
 
     /**
-     * Create Inventory Movemen
+     * Create Inventory Movement
      *
      * Record an opening balance, stock receipt, or signed manual adjustment.
      */

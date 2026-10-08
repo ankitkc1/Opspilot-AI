@@ -17,6 +17,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutActionsRouteImport } from './routes/_layout/actions'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutAutomationRouteImport } from './routes/_layout/automation'
 import { Route as LayoutBriefingsRouteImport } from './routes/_layout/briefings'
 import { Route as LayoutInventoryRouteImport } from './routes/_layout/inventory'
 import { Route as LayoutProductsRouteImport } from './routes/_layout/products'
@@ -64,6 +65,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAutomationRoute = LayoutAutomationRouteImport.update({
+  id: '/automation',
+  path: '/automation',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutBriefingsRoute = LayoutBriefingsRouteImport.update({
   id: '/briefings',
   path: '/briefings',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/actions': typeof LayoutActionsRoute
   '/admin': typeof LayoutAdminRoute
+  '/automation': typeof LayoutAutomationRoute
   '/briefings': typeof LayoutBriefingsRoute
   '/inventory': typeof LayoutInventoryRoute
   '/products': typeof LayoutProductsRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/actions': typeof LayoutActionsRoute
   '/admin': typeof LayoutAdminRoute
+  '/automation': typeof LayoutAutomationRoute
   '/briefings': typeof LayoutBriefingsRoute
   '/inventory': typeof LayoutInventoryRoute
   '/products': typeof LayoutProductsRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/actions': typeof LayoutActionsRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/automation': typeof LayoutAutomationRoute
   '/_layout/briefings': typeof LayoutBriefingsRoute
   '/_layout/inventory': typeof LayoutInventoryRoute
   '/_layout/products': typeof LayoutProductsRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/actions'
     | '/admin'
+    | '/automation'
     | '/briefings'
     | '/inventory'
     | '/products'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/actions'
     | '/admin'
+    | '/automation'
     | '/briefings'
     | '/inventory'
     | '/products'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/actions'
     | '/_layout/admin'
+    | '/_layout/automation'
     | '/_layout/briefings'
     | '/_layout/inventory'
     | '/_layout/products'
@@ -268,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/automation': {
+      id: '/_layout/automation'
+      path: '/automation'
+      fullPath: '/automation'
+      preLoaderRoute: typeof LayoutAutomationRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/briefings': {
       id: '/_layout/briefings'
       path: '/briefings'
@@ -323,6 +342,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutActionsRoute: typeof LayoutActionsRoute
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAutomationRoute: typeof LayoutAutomationRoute
   LayoutBriefingsRoute: typeof LayoutBriefingsRoute
   LayoutInventoryRoute: typeof LayoutInventoryRoute
   LayoutProductsRoute: typeof LayoutProductsRoute
@@ -336,6 +356,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutActionsRoute: LayoutActionsRoute,
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAutomationRoute: LayoutAutomationRoute,
   LayoutBriefingsRoute: LayoutBriefingsRoute,
   LayoutInventoryRoute: LayoutInventoryRoute,
   LayoutProductsRoute: LayoutProductsRoute,

@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import date
+from typing import cast
 
 from pydantic import ValidationError
 from sqlmodel import Session, col, func, select
@@ -10,6 +11,7 @@ from app.models import (
     AIDailyBriefingContent,
     AIDailyBriefingPublic,
     AIDailyBriefingsPublic,
+    AIGenerationMode,
     DashboardSummaryPublic,
 )
 from app.services.ollama import OllamaClient, OllamaMessage
@@ -67,6 +69,7 @@ def save_daily_briefing(
     source: DashboardSummaryPublic,
     model: str,
     generated_by_id: uuid.UUID,
+    generation_mode: AIGenerationMode = "manual",
 ) -> AIDailyBriefingPublic:
     briefing = AIDailyBriefing(
         **content.model_dump(),
@@ -74,6 +77,7 @@ def save_daily_briefing(
         model=model,
         source=source.model_dump(mode="json"),
         generated_by_id=generated_by_id,
+        generation_mode=generation_mode,
     )
     session.add(briefing)
     session.commit()
@@ -92,6 +96,7 @@ def to_public_briefing(briefing: AIDailyBriefing) -> AIDailyBriefingPublic:
         report_date=briefing.report_date,
         generated_at=briefing.generated_at,
         model=briefing.model,
+        generation_mode=cast(AIGenerationMode, briefing.generation_mode),
         source=DashboardSummaryPublic.model_validate(briefing.source),
         generated_by_id=briefing.generated_by_id,
     )
