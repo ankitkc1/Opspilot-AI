@@ -515,6 +515,58 @@ class AIDailyBriefingsPublic(SQLModel):
     count: int
 
 
+class AIWeeklyReviewContent(SQLModel):
+    headline: str = Field(min_length=1, max_length=120)
+    summary: str = Field(min_length=1, max_length=800)
+    wins: list[str] = Field(max_length=3)
+    concerns: list[str] = Field(max_length=3)
+    priorities: list[str] = Field(min_length=1, max_length=3)
+
+
+class AIWeeklyReview(AIWeeklyReviewContent, table=True):
+    __table_args__ = (
+        Index(
+            "ix_aiweeklyreview_period_end_generated_at",
+            "period_end_date",
+            "generated_at",
+        ),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    wins: list[str] = Field(max_length=3, sa_type=JSON)
+    concerns: list[str] = Field(max_length=3, sa_type=JSON)
+    priorities: list[str] = Field(min_length=1, max_length=3, sa_type=JSON)
+    period_start_date: date
+    period_end_date: date
+    generated_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    model: str = Field(max_length=100)
+    source: dict[str, object] = Field(sa_type=JSON)
+    generated_by_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        ondelete="SET NULL",
+        index=True,
+    )
+
+
+class AIWeeklyReviewPublic(AIWeeklyReviewContent):
+    id: uuid.UUID
+    period_start_date: date
+    period_end_date: date
+    generated_at: datetime
+    model: str
+    source: DashboardTrendsPublic
+    generated_by_id: uuid.UUID | None
+
+
+class AIWeeklyReviewsPublic(SQLModel):
+    data: list[AIWeeklyReviewPublic]
+    count: int
+
+
 # -------------------------
 # AI action center models
 # -------------------------

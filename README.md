@@ -12,6 +12,7 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - 7, 14, and 30-day operations trends with prior-period comparison
 - Local Ollama connectivity and model-readiness checks
 - Grounded AI daily briefings with saved history
+- Grounded AI weekly operations reviews with saved trend snapshots
 - Searchable briefing audit UI with the original source metrics
 - User-approved AI action tracking with priorities, due dates, and status
 - PostgreSQL migrations and automated backend tests

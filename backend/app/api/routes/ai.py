@@ -4,7 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models import AIDailyBriefingPublic, AIDailyBriefingsPublic, AIStatusPublic
+from app.models import (
+    AIDailyBriefingPublic,
+    AIDailyBriefingsPublic,
+    AIStatusPublic,
+    AIWeeklyReviewPublic,
+    AIWeeklyReviewsPublic,
+)
 from app.services.ai_briefing import (
     AIBriefingResponseError,
     generate_daily_briefing,
@@ -12,7 +18,18 @@ from app.services.ai_briefing import (
     get_latest_daily_briefing,
     save_daily_briefing,
 )
-from app.services.dashboard import get_dashboard_summary, resolve_report_date
+from app.services.ai_weekly_review import (
+    AIWeeklyReviewResponseError,
+    generate_weekly_review,
+    get_latest_weekly_review,
+    get_weekly_review_history,
+    save_weekly_review,
+)
+from app.services.dashboard import (
+    get_dashboard_summary,
+    get_dashboard_trends,
+    resolve_report_date,
+)
 from app.services.ollama import OllamaClient, OllamaServiceError
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -117,6 +134,70 @@ def read_daily_briefing_history(
     return get_daily_briefing_history(
         session,
         report_date=report_date,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.post("/weekly-review", response_model=AIWeeklyReviewPublic)
+def create_weekly_review(
+    session: SessionDep,
+    current_user: CurrentUser,
+    ollama: OllamaClientDep,
+    end_date: date | None = None,
+) -> AIWeeklyReviewPublic:
+    """Generate a grounded review from a seven-day operations trend snapshot."""
+
+    source = get_dashboard_trends(session, end_date=end_date, days=7)
+    try:
+        content = generate_weekly_review(ollama, source)
+    except OllamaServiceError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Local AI is unavailable. Check Ollama and the configured model.",
+        )
+    except AIWeeklyReviewResponseError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Local AI returned a weekly review in an invalid format.",
+        )
+
+    return save_weekly_review(
+        session,
+        content=content,
+        source=source,
+        model=ollama.model,
+        generated_by_id=current_user.id,
+    )
+
+
+@router.get("/weekly-review", response_model=AIWeeklyReviewPublic | None)
+def read_latest_weekly_review(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    end_date: date | None = None,
+) -> AIWeeklyReviewPublic | None:
+    """Return the latest saved weekly review for a period end date."""
+
+    return get_latest_weekly_review(
+        session,
+        period_end_date=resolve_report_date(end_date),
+    )
+
+
+@router.get("/weekly-reviews", response_model=AIWeeklyReviewsPublic)
+def read_weekly_review_history(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    end_date: date | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> AIWeeklyReviewsPublic:
+    """List saved weekly reviews newest first, optionally by period end date."""
+
+    return get_weekly_review_history(
+        session,
+        period_end_date=end_date,
         skip=skip,
         limit=limit,
     )

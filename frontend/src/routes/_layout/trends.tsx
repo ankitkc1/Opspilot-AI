@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { isAxiosError } from "axios"
 import type { LucideIcon } from "lucide-react"
@@ -8,16 +8,23 @@ import {
   ArrowUpRight,
   CalendarDays,
   CircleDollarSign,
+  ListChecks,
   LoaderCircle,
   Minus,
   ReceiptText,
   RefreshCw,
+  ShieldAlert,
   ShoppingBasket,
+  Sparkles,
   TrendingUp,
+  Trophy,
 } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import {
+  type AIWeeklyReviewPublic,
+  AiService,
   DashboardService,
   type DashboardTrendDayPublic,
   type TrendDays,
@@ -103,6 +110,28 @@ function getErrorMessage(error: unknown): string {
     if (typeof detail === "string") return detail
   }
   return "Operations trends could not be loaded. Check the backend and try again."
+}
+
+function isWeeklyReview(value: unknown): value is AIWeeklyReviewPublic {
+  return typeof value === "object" && value !== null && "source" in value
+}
+
+function formatGeneratedAt(value: string): string {
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Sydney",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value))
+}
+
+function getWeeklyReviewError(error: unknown): string {
+  if (isAxiosError(error)) {
+    const detail = (error.response?.data as { detail?: unknown } | undefined)
+      ?.detail
+    if (typeof detail === "string") return detail
+  }
+
+  return "The weekly review could not be loaded or created. Check the backend and Ollama, then try again."
 }
 
 function ChangeIndicator({ value }: { value: string | null }) {
@@ -228,6 +257,209 @@ function RevenueChart({ daily }: { daily: DashboardTrendDayPublic[] }) {
   )
 }
 
+function WeeklyReviewList({
+  emptyMessage,
+  icon: Icon,
+  iconClassName,
+  items,
+  title,
+}: {
+  emptyMessage: string
+  icon: LucideIcon
+  iconClassName: string
+  items: string[]
+  title: string
+}) {
+  return (
+    <div className="rounded-xl border bg-background/70 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Icon className={cn("size-4", iconClassName)} />
+        <h3 className="font-medium">{title}</h3>
+      </div>
+      {items.length > 0 ? (
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          {items.map((item) => (
+            <li className="flex gap-2" key={item}>
+              <span aria-hidden="true" className="mt-0.5 text-foreground/50">
+                •
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+      )}
+    </div>
+  )
+}
+
+function WeeklyReview({
+  canGenerate,
+  error,
+  isGenerating,
+  isLoading,
+  isStale,
+  onGenerate,
+  review,
+}: {
+  canGenerate: boolean
+  error: unknown
+  isGenerating: boolean
+  isLoading: boolean
+  isStale: boolean
+  onGenerate: () => void
+  review?: AIWeeklyReviewPublic
+}) {
+  return (
+    <Card className="overflow-hidden border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-background to-background">
+      <CardHeader className="border-b border-violet-500/15">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-violet-500/15 p-2.5 text-violet-600 dark:text-violet-400">
+              <Sparkles className="size-5" />
+            </div>
+            <div>
+              <CardTitle>AI weekly operations review</CardTitle>
+              <CardDescription>
+                Wins, concerns, and next-week priorities grounded in this
+                seven-day comparison
+              </CardDescription>
+            </div>
+          </div>
+          <Button
+            className="shrink-0"
+            disabled={!canGenerate || isGenerating || isLoading}
+            onClick={onGenerate}
+          >
+            {isGenerating ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Sparkles />
+            )}
+            {isGenerating
+              ? "Generating..."
+              : isStale
+                ? "Update review"
+                : review
+                  ? "Regenerate"
+                  : "Generate review"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!canGenerate ? (
+          <Alert>
+            <CalendarDays />
+            <AlertTitle>Select the 7-day view</AlertTitle>
+            <AlertDescription>
+              Weekly reviews use one complete seven-day period and the seven
+              days immediately before it.
+            </AlertDescription>
+          </Alert>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>Weekly review unavailable</AlertTitle>
+            <AlertDescription>{getWeeklyReviewError(error)}</AlertDescription>
+          </Alert>
+        ) : isGenerating ? (
+          <div className="space-y-4" aria-live="polite">
+            <div>
+              <p className="font-medium">Reviewing the seven-day snapshot</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your local model is comparing performance and preparing a
+                concise plan. This can take up to a minute.
+              </p>
+            </div>
+            <Skeleton className="h-7 w-2/3" />
+            <Skeleton className="h-16 w-full" />
+            <div className="grid gap-3 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton className="h-32" key={index} />
+              ))}
+            </div>
+          </div>
+        ) : isLoading ? (
+          <div
+            aria-label="Loading saved weekly review"
+            className="space-y-3"
+            role="status"
+          >
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        ) : review ? (
+          <div className="space-y-5">
+            <div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Badge variant="secondary">Local AI · Saved</Badge>
+                {isStale ? (
+                  <Badge
+                    className="border-amber-500/40 text-amber-700 dark:text-amber-300"
+                    variant="outline"
+                  >
+                    Trends changed
+                  </Badge>
+                ) : null}
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {review.headline}
+              </h2>
+              <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">
+                {review.summary}
+              </p>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-3">
+              <WeeklyReviewList
+                emptyMessage="No clear wins identified for this period."
+                icon={Trophy}
+                iconClassName="text-emerald-600 dark:text-emerald-400"
+                items={review.wins}
+                title="Wins"
+              />
+              <WeeklyReviewList
+                emptyMessage="No specific concerns identified."
+                icon={ShieldAlert}
+                iconClassName="text-rose-600 dark:text-rose-400"
+                items={review.concerns}
+                title="Concerns"
+              />
+              <WeeklyReviewList
+                emptyMessage="No priorities were returned."
+                icon={ListChecks}
+                iconClassName="text-sky-600 dark:text-sky-400"
+                items={review.priorities}
+                title="Next-week priorities"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Saved from {review.model} on{" "}
+              {formatGeneratedAt(review.generated_at)}. Verify important
+              decisions against the source trends below
+              {isStale ? ", then update this review" : ""}.
+            </p>
+          </div>
+        ) : (
+          <div className="flex min-h-40 flex-col items-center justify-center text-center">
+            <div className="mb-4 rounded-full bg-violet-500/10 p-4">
+              <Sparkles className="size-7 text-violet-600 dark:text-violet-400" />
+            </div>
+            <p className="font-medium">Turn the week into a focused plan</p>
+            <p className="mt-1 max-w-lg text-sm text-muted-foreground">
+              OpsPilot sends only this saved trend snapshot to your private,
+              locally running AI model.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export const Route = createFileRoute("/_layout/trends")({
   component: Trends,
   head: () => ({
@@ -238,6 +470,7 @@ export const Route = createFileRoute("/_layout/trends")({
 function Trends() {
   const [endDate, setEndDate] = useState(getSydneyDate)
   const [days, setDays] = useState<TrendDays>(7)
+  const queryClient = useQueryClient()
 
   const trendsQuery = useQuery({
     queryKey: ["dashboard-trends", endDate, days],
@@ -250,6 +483,50 @@ function Trends() {
   })
 
   const data = trendsQuery.data
+  const reviewEndDate = data?.end_date ?? endDate
+  const latestReviewQuery = useQuery({
+    queryKey: ["ai-weekly-review", reviewEndDate],
+    queryFn: async () => {
+      const response = await AiService.readLatestWeeklyReview({
+        query: { end_date: reviewEndDate || undefined },
+      })
+      return isWeeklyReview(response.data) ? response.data : null
+    },
+    enabled: Boolean(data && days === 7),
+  })
+  const reviewMutation = useMutation({
+    mutationFn: async () => {
+      const response = await AiService.createWeeklyReview({
+        query: { end_date: reviewEndDate || undefined },
+      })
+      return response.data
+    },
+    onSuccess: (review) => {
+      queryClient.setQueryData(
+        ["ai-weekly-review", review.period_end_date],
+        review,
+      )
+      toast.success("Weekly review saved", {
+        description: review.headline,
+      })
+    },
+    onError: (error) => {
+      toast.error("Weekly review not created", {
+        description: getWeeklyReviewError(error),
+      })
+    },
+  })
+  const generatedReview =
+    reviewMutation.data?.period_end_date === reviewEndDate
+      ? reviewMutation.data
+      : undefined
+  const review =
+    days === 7
+      ? (generatedReview ?? latestReviewQuery.data ?? undefined)
+      : undefined
+  const isReviewStale = Boolean(
+    review && data && JSON.stringify(review.source) !== JSON.stringify(data),
+  )
 
   return (
     <div className="space-y-6" data-testid="operations-trends">
@@ -273,7 +550,10 @@ function Trends() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select
               value={String(days)}
-              onValueChange={(value) => setDays(Number(value) as TrendDays)}
+              onValueChange={(value) => {
+                reviewMutation.reset()
+                setDays(Number(value) as TrendDays)
+              }}
             >
               <SelectTrigger className="w-full bg-background/80 sm:w-36">
                 <SelectValue />
@@ -291,14 +571,21 @@ function Trends() {
                 className="w-full bg-background/80 pl-9 sm:w-44"
                 type="date"
                 value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
+                onChange={(event) => {
+                  reviewMutation.reset()
+                  setEndDate(event.target.value)
+                }}
               />
             </div>
             <Button
               className="bg-background/80"
               variant="outline"
               disabled={trendsQuery.isFetching}
-              onClick={() => void trendsQuery.refetch()}
+              onClick={() => {
+                reviewMutation.reset()
+                void trendsQuery.refetch()
+                if (days === 7) void latestReviewQuery.refetch()
+              }}
             >
               {trendsQuery.isFetching ? (
                 <LoaderCircle className="animate-spin" />
@@ -378,6 +665,16 @@ function Trends() {
               iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-400"
             />
           </section>
+
+          <WeeklyReview
+            canGenerate={days === 7}
+            error={reviewMutation.error ?? latestReviewQuery.error}
+            isGenerating={reviewMutation.isPending}
+            isLoading={latestReviewQuery.isPending && days === 7}
+            isStale={isReviewStale}
+            onGenerate={() => reviewMutation.mutate()}
+            review={review}
+          />
 
           <Card>
             <CardHeader className="border-b">
