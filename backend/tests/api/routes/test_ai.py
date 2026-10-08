@@ -393,6 +393,7 @@ def test_weekly_review_is_grounded_in_trend_snapshot(
     assert content["source"]["sales_count"] == 0
     assert content["source"]["previous_period"]["sales_count"] == 0
     assert content["model"] == "qwen3:4b"
+    assert content["generation_mode"] == "manual"
     assert content["generated_by_id"]
 
     assert isinstance(ollama.last_response_format, dict)

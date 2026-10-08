@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.db import engine
-from app.services.ai_automation import run_due_daily_automations
+from app.services.ai_automation import run_due_automations
 from app.services.ollama import OllamaClient
 
 logging.basicConfig(level=logging.INFO)
@@ -21,10 +21,11 @@ def run_worker() -> None:
     while True:
         try:
             with Session(engine) as session:
-                runs = run_due_daily_automations(session, ollama=ollama)
+                runs = run_due_automations(session, ollama=ollama)
             for run in runs:
                 logger.info(
-                    "Daily briefing automation %s finished with status %s",
+                    "%s automation %s finished with status %s",
+                    run.automation_type,
                     run.id,
                     run.status,
                 )

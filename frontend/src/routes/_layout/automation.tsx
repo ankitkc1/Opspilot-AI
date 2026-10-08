@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Bot,
   CalendarClock,
+  CalendarDays,
   CircleCheck,
   Clock3,
   LoaderCircle,
@@ -15,7 +16,12 @@ import {
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { type AIDailyAutomationUpdate, AiService } from "@/client"
+import {
+  type AIAutomationRunPublic,
+  type AIDailyAutomationUpdate,
+  type AIWeeklyAutomationUpdate,
+  AiService,
+} from "@/client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,9 +35,27 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const automationQueryKey = ["ai-automation", "daily-briefing"] as const
+const dailyAutomationQueryKey = ["ai-automation", "daily-briefing"] as const
+const weeklyAutomationQueryKey = ["ai-automation", "weekly-review"] as const
+
+const weekdays = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const
 
 function getErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
@@ -54,7 +78,14 @@ function formatDateTime(
   }).format(new Date(value))
 }
 
-function statusBadge(status: "running" | "succeeded" | "failed") {
+function formatDate(value: string): string {
+  const [year, month, day] = value.split("-").map(Number)
+  return new Intl.DateTimeFormat("en-AU", { dateStyle: "medium" }).format(
+    new Date(year, month - 1, day),
+  )
+}
+
+function statusBadge(status: AIAutomationRunPublic["status"]) {
   if (status === "succeeded") {
     return (
       <Badge
@@ -85,6 +116,56 @@ function statusBadge(status: "running" | "succeeded" | "failed") {
   )
 }
 
+function RunSummary({
+  emptyMessage,
+  run,
+  timezone,
+}: {
+  emptyMessage: string
+  run: AIAutomationRunPublic | null
+  timezone: string
+}) {
+  if (!run) {
+    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {statusBadge(run.status)}
+        <Badge variant="secondary">
+          {run.trigger === "scheduled" ? "Scheduled" : "Run now"}
+        </Badge>
+      </div>
+      <dl className="grid gap-3 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-muted-foreground">Scheduled for</dt>
+          <dd className="font-medium">{formatDate(run.scheduled_for)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Started</dt>
+          <dd className="font-medium">
+            {formatDateTime(run.started_at, timezone)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Completed</dt>
+          <dd className="font-medium">
+            {formatDateTime(run.completed_at, timezone)}
+          </dd>
+        </div>
+      </dl>
+      {run.error ? (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertTitle>Run failed</AlertTitle>
+          <AlertDescription>{run.error}</AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  )
+}
+
 export const Route = createFileRoute("/_layout/automation")({
   component: Automation,
   head: () => ({
@@ -94,26 +175,45 @@ export const Route = createFileRoute("/_layout/automation")({
 
 function Automation() {
   const queryClient = useQueryClient()
-  const [enabled, setEnabled] = useState(false)
-  const [runTime, setRunTime] = useState("08:00")
+  const [dailyEnabled, setDailyEnabled] = useState(false)
+  const [dailyRunTime, setDailyRunTime] = useState("08:00")
+  const [weeklyEnabled, setWeeklyEnabled] = useState(false)
+  const [weeklyWeekday, setWeeklyWeekday] = useState(0)
+  const [weeklyRunTime, setWeeklyRunTime] = useState("09:00")
 
-  const automationQuery = useQuery({
-    queryKey: automationQueryKey,
+  const dailyQuery = useQuery({
+    queryKey: dailyAutomationQueryKey,
     queryFn: async () => {
       const response = await AiService.readDailyBriefingAutomation()
       return response.data
     },
     refetchInterval: 30_000,
   })
+  const weeklyQuery = useQuery({
+    queryKey: weeklyAutomationQueryKey,
+    queryFn: async () => {
+      const response = await AiService.readWeeklyReviewAutomation()
+      return response.data
+    },
+    refetchInterval: 30_000,
+  })
 
   useEffect(() => {
-    if (automationQuery.data) {
-      setEnabled(automationQuery.data.enabled)
-      setRunTime(automationQuery.data.run_time.slice(0, 5))
+    if (dailyQuery.data) {
+      setDailyEnabled(dailyQuery.data.enabled)
+      setDailyRunTime(dailyQuery.data.run_time.slice(0, 5))
     }
-  }, [automationQuery.data])
+  }, [dailyQuery.data])
 
-  const updateMutation = useMutation({
+  useEffect(() => {
+    if (weeklyQuery.data) {
+      setWeeklyEnabled(weeklyQuery.data.enabled)
+      setWeeklyWeekday(weeklyQuery.data.weekday)
+      setWeeklyRunTime(weeklyQuery.data.run_time.slice(0, 5))
+    }
+  }, [weeklyQuery.data])
+
+  const updateDailyMutation = useMutation({
     mutationFn: async (payload: AIDailyAutomationUpdate) => {
       const response = await AiService.updateDailyBriefingAutomation({
         body: payload,
@@ -121,7 +221,7 @@ function Automation() {
       return response.data
     },
     onSuccess: (automation) => {
-      queryClient.setQueryData(automationQueryKey, automation)
+      queryClient.setQueryData(dailyAutomationQueryKey, automation)
       toast.success(
         automation.enabled
           ? "Daily briefing automation enabled"
@@ -131,18 +231,36 @@ function Automation() {
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 
-  const runMutation = useMutation({
+  const updateWeeklyMutation = useMutation({
+    mutationFn: async (payload: AIWeeklyAutomationUpdate) => {
+      const response = await AiService.updateWeeklyReviewAutomation({
+        body: payload,
+      })
+      return response.data
+    },
+    onSuccess: (automation) => {
+      queryClient.setQueryData(weeklyAutomationQueryKey, automation)
+      toast.success(
+        automation.enabled
+          ? "Weekly review automation enabled"
+          : "Weekly review automation paused",
+      )
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+
+  const runDailyMutation = useMutation({
     mutationFn: async () => {
       const response = await AiService.runDailyBriefingAutomation()
       return response.data
     },
     onSuccess: async (run) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: automationQueryKey }),
+        queryClient.invalidateQueries({ queryKey: dailyAutomationQueryKey }),
         queryClient.invalidateQueries({ queryKey: ["ai-daily-briefing"] }),
       ])
       if (run.status === "failed") {
-        toast.error("Automation run failed", {
+        toast.error("Daily automation failed", {
           description: run.error ?? "Local AI could not create the briefing.",
         })
         return
@@ -152,14 +270,43 @@ function Automation() {
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 
-  const automation = automationQuery.data
-  const hasChanges = Boolean(
-    automation &&
-      (enabled !== automation.enabled ||
-        runTime !== automation.run_time.slice(0, 5)),
+  const runWeeklyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await AiService.runWeeklyReviewAutomation()
+      return response.data
+    },
+    onSuccess: async (run) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: weeklyAutomationQueryKey }),
+        queryClient.invalidateQueries({ queryKey: ["ai-weekly-review"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-weekly-reviews"] }),
+      ])
+      if (run.status === "failed") {
+        toast.error("Weekly automation failed", {
+          description: run.error ?? "Local AI could not create the review.",
+        })
+        return
+      }
+      toast.success("Weekly review generated automatically")
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+
+  const daily = dailyQuery.data
+  const weekly = weeklyQuery.data
+  const dailyHasChanges = Boolean(
+    daily &&
+      (dailyEnabled !== daily.enabled ||
+        dailyRunTime !== daily.run_time.slice(0, 5)),
+  )
+  const weeklyHasChanges = Boolean(
+    weekly &&
+      (weeklyEnabled !== weekly.enabled ||
+        weeklyWeekday !== weekly.weekday ||
+        weeklyRunTime !== weekly.run_time.slice(0, 5)),
   )
 
-  if (automationQuery.isPending) {
+  if (dailyQuery.isPending || weeklyQuery.isPending) {
     return (
       <div
         className="space-y-6"
@@ -167,25 +314,27 @@ function Automation() {
         aria-label="Loading AI automation"
       >
         <Skeleton className="h-48 rounded-2xl" />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Skeleton className="h-80 rounded-xl" />
-          <Skeleton className="h-80 rounded-xl" />
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Skeleton className="h-[32rem] rounded-xl" />
+          <Skeleton className="h-[32rem] rounded-xl" />
         </div>
       </div>
     )
   }
 
-  if (automationQuery.error || !automation) {
+  if (dailyQuery.error || weeklyQuery.error || !daily || !weekly) {
     return (
       <Alert variant="destructive">
         <AlertCircle />
         <AlertTitle>AI automation unavailable</AlertTitle>
         <AlertDescription>
-          {getErrorMessage(automationQuery.error)}
+          {getErrorMessage(dailyQuery.error ?? weeklyQuery.error)}
         </AlertDescription>
       </Alert>
     )
   }
+
+  const activeSchedules = Number(daily.enabled) + Number(weekly.enabled)
 
   return (
     <div className="space-y-6" data-testid="ai-automation">
@@ -198,15 +347,17 @@ function Automation() {
               Approval-first automation
             </div>
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              Daily AI automation
+              AI automation
             </h1>
             <p className="mt-3 text-muted-foreground">
-              Let OpsPilot prepare a grounded daily briefing on schedule while
-              keeping operational changes under your control.
+              Schedule grounded daily briefings and weekly reviews while keeping
+              every operational change under your control.
             </p>
           </div>
-          <Badge variant={automation.enabled ? "default" : "secondary"}>
-            {automation.enabled ? "Schedule active" : "Schedule paused"}
+          <Badge variant={activeSchedules ? "default" : "secondary"}>
+            {activeSchedules
+              ? `${activeSchedules} schedule${activeSchedules === 1 ? "" : "s"} active`
+              : "Schedules paused"}
           </Badge>
         </div>
       </section>
@@ -215,12 +366,25 @@ function Automation() {
         <Card>
           <CardContent className="py-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CalendarClock className="size-4" />
-              Next scheduled run
+              <Sparkles className="size-4" />
+              Next daily briefing
             </div>
             <p className="mt-2 font-semibold">
-              {automation.enabled
-                ? formatDateTime(automation.next_run_at, automation.timezone)
+              {daily.enabled
+                ? formatDateTime(daily.next_run_at, daily.timezone)
+                : "Paused"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CalendarDays className="size-4" />
+              Next weekly review
+            </div>
+            <p className="mt-2 font-semibold">
+              {weekly.enabled
+                ? formatDateTime(weekly.next_run_at, weekly.timezone)
                 : "Paused"}
             </p>
           </CardContent>
@@ -231,174 +395,206 @@ function Automation() {
               <Clock3 className="size-4" />
               Business timezone
             </div>
-            <p className="mt-2 font-semibold">{automation.timezone}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-5">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="size-4" />
-              Last run
-            </div>
-            <div className="mt-2">
-              {automation.last_run
-                ? statusBadge(automation.last_run.status)
-                : "No runs yet"}
-            </div>
+            <p className="mt-2 font-semibold">{daily.timezone}</p>
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader className="border-b">
-            <CardTitle>Daily briefing schedule</CardTitle>
+            <CardTitle>Daily briefing</CardTitle>
             <CardDescription>
-              The worker creates at most one scheduled briefing per business
-              day.
+              Creates at most one scheduled briefing per business day.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 py-6">
             <div className="flex items-start gap-3 rounded-xl border p-4">
               <Checkbox
                 id="daily-automation-enabled"
-                checked={enabled}
-                onCheckedChange={(checked) => setEnabled(checked === true)}
+                checked={dailyEnabled}
+                onCheckedChange={(checked) => setDailyEnabled(checked === true)}
               />
               <div className="grid gap-1.5">
                 <Label htmlFor="daily-automation-enabled">
-                  Generate my daily briefing automatically
+                  Generate daily briefings automatically
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  OpsPilot reads the daily dashboard snapshot and saves the AI
-                  result to briefing history.
+                  Uses the deterministic daily dashboard snapshot.
                 </p>
               </div>
             </div>
-
             <div className="grid gap-2">
               <Label htmlFor="daily-automation-time">Run time</Label>
               <Input
                 className="max-w-48"
                 id="daily-automation-time"
                 type="time"
-                value={runTime}
-                onChange={(event) => setRunTime(event.target.value)}
+                value={dailyRunTime}
+                onChange={(event) => setDailyRunTime(event.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Uses {automation.timezone}. The automation service must be
-                running at this time.
-              </p>
             </div>
-
             <div className="flex flex-wrap gap-3">
               <Button
-                disabled={!hasChanges || updateMutation.isPending || !runTime}
+                disabled={
+                  !dailyHasChanges ||
+                  updateDailyMutation.isPending ||
+                  !dailyRunTime
+                }
                 onClick={() =>
-                  updateMutation.mutate({
-                    enabled,
-                    run_time: `${runTime}:00`,
+                  updateDailyMutation.mutate({
+                    enabled: dailyEnabled,
+                    run_time: `${dailyRunTime}:00`,
                   })
                 }
               >
-                {updateMutation.isPending ? (
+                {updateDailyMutation.isPending ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
                   <CalendarClock />
                 )}
-                Save schedule
+                Save daily schedule
               </Button>
               <Button
                 variant="outline"
-                disabled={runMutation.isPending}
-                onClick={() => runMutation.mutate()}
+                disabled={runDailyMutation.isPending}
+                onClick={() => runDailyMutation.mutate()}
               >
-                {runMutation.isPending ? (
+                {runDailyMutation.isPending ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
                   <Play />
                 )}
-                {runMutation.isPending ? "Running..." : "Run now"}
+                {runDailyMutation.isPending ? "Running..." : "Run now"}
               </Button>
+            </div>
+            <div className="border-t pt-5">
+              <p className="mb-3 text-sm font-medium">Latest daily run</p>
+              <RunSummary
+                emptyMessage="No daily automation runs yet."
+                run={daily.last_run}
+                timezone={daily.timezone}
+              />
             </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Latest automation run</CardTitle>
-              <CardDescription>
-                Every attempt is recorded for auditability.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {automation.last_run ? (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {statusBadge(automation.last_run.status)}
-                    <Badge variant="secondary">
-                      {automation.last_run.trigger === "scheduled"
-                        ? "Scheduled"
-                        : "Run now"}
-                    </Badge>
-                  </div>
-                  <dl className="grid gap-3 text-sm">
-                    <div>
-                      <dt className="text-muted-foreground">Started</dt>
-                      <dd className="font-medium">
-                        {formatDateTime(
-                          automation.last_run.started_at,
-                          automation.timezone,
-                        )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Completed</dt>
-                      <dd className="font-medium">
-                        {formatDateTime(
-                          automation.last_run.completed_at,
-                          automation.timezone,
-                        )}
-                      </dd>
-                    </div>
-                  </dl>
-                  {automation.last_run.error ? (
-                    <Alert variant="destructive">
-                      <AlertCircle />
-                      <AlertTitle>Run failed</AlertTitle>
-                      <AlertDescription>
-                        {automation.last_run.error}
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
-                </div>
-              ) : (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>Weekly review</CardTitle>
+            <CardDescription>
+              Reviews the seven completed days ending before the scheduled run.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 py-6">
+            <div className="flex items-start gap-3 rounded-xl border p-4">
+              <Checkbox
+                id="weekly-automation-enabled"
+                checked={weeklyEnabled}
+                onCheckedChange={(checked) =>
+                  setWeeklyEnabled(checked === true)
+                }
+              />
+              <div className="grid gap-1.5">
+                <Label htmlFor="weekly-automation-enabled">
+                  Generate weekly reviews automatically
+                </Label>
                 <p className="text-sm text-muted-foreground">
-                  Save a schedule or choose Run now to create the first audit
-                  record.
+                  Uses the grounded seven-day trends snapshot and comparison.
                 </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-emerald-500/25 bg-emerald-500/5">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="size-5 text-emerald-600" />
-                <CardTitle>Automation guardrails</CardTitle>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Reads only the deterministic daily operations snapshot.</li>
-                <li>Creates a saved briefing with its source data attached.</li>
-                <li>Never changes products, inventory, sales, or actions.</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Run day</Label>
+                <Select
+                  value={String(weeklyWeekday)}
+                  onValueChange={(value) => setWeeklyWeekday(Number(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {weekdays.map((weekday, index) => (
+                      <SelectItem key={weekday} value={String(index)}>
+                        {weekday}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="weekly-automation-time">Run time</Label>
+                <Input
+                  id="weekly-automation-time"
+                  type="time"
+                  value={weeklyRunTime}
+                  onChange={(event) => setWeeklyRunTime(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                disabled={
+                  !weeklyHasChanges ||
+                  updateWeeklyMutation.isPending ||
+                  !weeklyRunTime
+                }
+                onClick={() =>
+                  updateWeeklyMutation.mutate({
+                    enabled: weeklyEnabled,
+                    weekday: weeklyWeekday,
+                    run_time: `${weeklyRunTime}:00`,
+                  })
+                }
+              >
+                {updateWeeklyMutation.isPending ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <CalendarClock />
+                )}
+                Save weekly schedule
+              </Button>
+              <Button
+                variant="outline"
+                disabled={runWeeklyMutation.isPending}
+                onClick={() => runWeeklyMutation.mutate()}
+              >
+                {runWeeklyMutation.isPending ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <Play />
+                )}
+                {runWeeklyMutation.isPending ? "Running..." : "Run now"}
+              </Button>
+            </div>
+            <div className="border-t pt-5">
+              <p className="mb-3 text-sm font-medium">Latest weekly run</p>
+              <RunSummary
+                emptyMessage="No weekly automation runs yet."
+                run={weekly.last_run}
+                timezone={weekly.timezone}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </section>
+
+      <Card className="border-emerald-500/25 bg-emerald-500/5">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-5 text-emerald-600" />
+            <CardTitle>Automation guardrails</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ul className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
+            <li>Reads only deterministic daily and weekly operations data.</li>
+            <li>Saves every AI result with its original source snapshot.</li>
+            <li>Never changes products, inventory, sales, or actions.</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   )
 }

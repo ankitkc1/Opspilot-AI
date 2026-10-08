@@ -15,7 +15,7 @@ OpsPilot is a local-first operations system for small businesses. The current co
 - Grounded AI weekly operations reviews with saved trend snapshots
 - Searchable daily and weekly AI audit history with original source metrics
 - User-approved AI action tracking with source traceability and completion outcomes
-- Scheduled daily AI briefings with per-user controls and audited run status
+- Scheduled daily briefings and weekly reviews with per-user controls and audited run status
 - PostgreSQL migrations and automated backend tests
 
 The local AI workflow uses Ollama with `qwen3:4b` to turn deterministic dashboard
@@ -78,12 +78,13 @@ Generated briefings are saved for auditability. Use
 `GET /api/v1/ai/daily-briefing` to load the latest saved briefing for a date and
 `GET /api/v1/ai/daily-briefings` to retrieve paginated briefing history.
 
-The Automation page can schedule one daily briefing per user in the configured
-business timezone. The dedicated `automation` Compose service checks schedules,
-prevents duplicate daily runs, and records successful and failed attempts. A
-manual **Run now** control uses the same audited workflow. Automation reads the
-dashboard snapshot and saves a briefing, but it never changes products,
-inventory, sales, or actions.
+The Automation page can schedule a daily briefing and a weekly review per user
+in the configured business timezone. The dedicated `automation` Compose service
+checks both schedules, prevents duplicate runs, and records successful and
+failed attempts. Weekly automation reviews the seven completed days ending
+before its scheduled run. Manual **Run now** controls use the same audited
+workflows. Automation reads dashboard and trend snapshots and saves AI results,
+but it never changes products, inventory, sales, or actions.
 
 Briefing priorities, risks, and opportunities can be added to the Action Center
 only after a user approves them. Actions remain linked to their source briefing,

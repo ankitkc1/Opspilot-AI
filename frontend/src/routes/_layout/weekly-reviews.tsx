@@ -220,6 +220,9 @@ function WeeklyReviewDetails({
           <div className="mb-1 flex flex-wrap gap-2 pr-8">
             <Badge variant="secondary">{formatPeriod(review)}</Badge>
             <Badge variant="outline">{review.model}</Badge>
+            {review.generation_mode === "automation" ? (
+              <Badge>Automated</Badge>
+            ) : null}
           </div>
           <DialogTitle className="text-xl leading-7">
             {review.headline}
@@ -479,8 +482,8 @@ function WeeklyReviewHistory() {
                   : "No saved weekly reviews yet"}
               </p>
               <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                Generate a review from the seven-day Trends view and it will
-                appear here automatically.
+                Generate a review from the seven-day Trends view or schedule it
+                from Automation. It will appear here with its source snapshot.
               </p>
             </div>
           ) : (
@@ -493,6 +496,9 @@ function WeeklyReviewHistory() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{formatPeriod(review)}</Badge>
                     <Badge variant="outline">{review.model}</Badge>
+                    {review.generation_mode === "automation" ? (
+                      <Badge>Automated</Badge>
+                    ) : null}
                   </div>
                   <h2 className="mt-4 text-lg font-semibold leading-7">
                     {review.headline}

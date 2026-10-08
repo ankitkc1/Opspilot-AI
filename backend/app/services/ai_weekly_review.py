@@ -1,11 +1,13 @@
 import json
 import uuid
 from datetime import date
+from typing import cast
 
 from pydantic import ValidationError
 from sqlmodel import Session, col, func, select
 
 from app.models import (
+    AIGenerationMode,
     AIWeeklyReview,
     AIWeeklyReviewContent,
     AIWeeklyReviewPublic,
@@ -66,6 +68,7 @@ def save_weekly_review(
     source: DashboardTrendsPublic,
     model: str,
     generated_by_id: uuid.UUID,
+    generation_mode: AIGenerationMode = "manual",
 ) -> AIWeeklyReviewPublic:
     review = AIWeeklyReview(
         **content.model_dump(),
@@ -74,6 +77,7 @@ def save_weekly_review(
         model=model,
         source=source.model_dump(mode="json"),
         generated_by_id=generated_by_id,
+        generation_mode=generation_mode,
     )
     session.add(review)
     session.commit()
@@ -93,6 +97,7 @@ def to_public_weekly_review(review: AIWeeklyReview) -> AIWeeklyReviewPublic:
         period_end_date=review.period_end_date,
         generated_at=review.generated_at,
         model=review.model,
+        generation_mode=cast(AIGenerationMode, review.generation_mode),
         source=DashboardTrendsPublic.model_validate(review.source),
         generated_by_id=review.generated_by_id,
     )

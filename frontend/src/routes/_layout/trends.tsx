@@ -429,6 +429,9 @@ function WeeklyReview({
             <div>
               <div className="mb-3 flex flex-wrap gap-2">
                 <Badge variant="secondary">Local AI · Saved</Badge>
+                {review.generation_mode === "automation" ? (
+                  <Badge>Automated</Badge>
+                ) : null}
                 {isStale ? (
                   <Badge
                     className="border-amber-500/40 text-amber-700 dark:text-amber-300"

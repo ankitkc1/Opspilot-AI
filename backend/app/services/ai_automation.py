@@ -11,8 +11,11 @@ from app.models import (
     AIAutomationRunPublic,
     AIAutomationSetting,
     AIAutomationTrigger,
+    AIAutomationType,
     AIDailyAutomationPublic,
     AIDailyAutomationUpdate,
+    AIWeeklyAutomationPublic,
+    AIWeeklyAutomationUpdate,
     User,
     get_datetime_utc,
 )
@@ -21,11 +24,20 @@ from app.services.ai_briefing import (
     generate_daily_briefing,
     save_daily_briefing,
 )
-from app.services.dashboard import get_dashboard_summary, resolve_report_date
+from app.services.ai_weekly_review import (
+    AIWeeklyReviewResponseError,
+    generate_weekly_review,
+    save_weekly_review,
+)
+from app.services.dashboard import (
+    get_dashboard_summary,
+    get_dashboard_trends,
+    resolve_report_date,
+)
 from app.services.ollama import OllamaClient, OllamaServiceError
 
 
-def get_or_create_daily_automation(
+def get_or_create_automation_setting(
     session: Session,
     *,
     user_id: uuid.UUID,
@@ -58,12 +70,36 @@ def update_daily_automation(
     user_id: uuid.UUID,
     automation_in: AIDailyAutomationUpdate,
 ) -> AIAutomationSetting:
-    automation = get_or_create_daily_automation(session, user_id=user_id)
+    automation = get_or_create_automation_setting(session, user_id=user_id)
     update_data = automation_in.model_dump(exclude_unset=True)
     if update_data.get("enabled") is not None:
         automation.daily_briefing_enabled = update_data["enabled"]
     if update_data.get("run_time") is not None:
         automation.daily_briefing_time = update_data["run_time"].replace(
+            second=0,
+            microsecond=0,
+        )
+    automation.updated_at = get_datetime_utc()
+    session.add(automation)
+    session.commit()
+    session.refresh(automation)
+    return automation
+
+
+def update_weekly_automation(
+    session: Session,
+    *,
+    user_id: uuid.UUID,
+    automation_in: AIWeeklyAutomationUpdate,
+) -> AIAutomationSetting:
+    automation = get_or_create_automation_setting(session, user_id=user_id)
+    update_data = automation_in.model_dump(exclude_unset=True)
+    if update_data.get("enabled") is not None:
+        automation.weekly_review_enabled = update_data["enabled"]
+    if update_data.get("weekday") is not None:
+        automation.weekly_review_weekday = update_data["weekday"]
+    if update_data.get("run_time") is not None:
+        automation.weekly_review_time = update_data["run_time"].replace(
             second=0,
             microsecond=0,
         )
@@ -82,10 +118,14 @@ def get_latest_automation_run(
     session: Session,
     *,
     user_id: uuid.UUID,
+    automation_type: AIAutomationType,
 ) -> AIAutomationRun | None:
     return session.exec(
         select(AIAutomationRun)
-        .where(AIAutomationRun.user_id == user_id)
+        .where(
+            AIAutomationRun.user_id == user_id,
+            AIAutomationRun.automation_type == automation_type,
+        )
         .order_by(
             col(AIAutomationRun.started_at).desc(),
             col(AIAutomationRun.id).desc(),
@@ -98,18 +138,20 @@ def _get_scheduled_run(
     session: Session,
     *,
     user_id: uuid.UUID,
-    report_date: date,
+    automation_type: AIAutomationType,
+    scheduled_for: date,
 ) -> AIAutomationRun | None:
     return session.exec(
         select(AIAutomationRun).where(
             AIAutomationRun.user_id == user_id,
+            AIAutomationRun.automation_type == automation_type,
             AIAutomationRun.trigger == "scheduled",
-            AIAutomationRun.scheduled_for == report_date,
+            AIAutomationRun.scheduled_for == scheduled_for,
         )
     ).first()
 
 
-def _next_run_at(
+def _next_daily_run_at(
     session: Session,
     *,
     automation: AIAutomationSetting,
@@ -129,7 +171,8 @@ def _next_run_at(
     existing_run = _get_scheduled_run(
         session,
         user_id=automation.user_id,
-        report_date=today,
+        automation_type="daily_briefing",
+        scheduled_for=today,
     )
     if local_now < scheduled_today:
         return scheduled_today.astimezone(UTC)
@@ -149,13 +192,108 @@ def get_daily_automation_public(
     now: datetime | None = None,
 ) -> AIDailyAutomationPublic:
     current_time = now or get_datetime_utc()
-    automation = get_or_create_daily_automation(session, user_id=user_id)
-    last_run = get_latest_automation_run(session, user_id=user_id)
+    automation = get_or_create_automation_setting(session, user_id=user_id)
+    last_run = get_latest_automation_run(
+        session,
+        user_id=user_id,
+        automation_type="daily_briefing",
+    )
     return AIDailyAutomationPublic(
         enabled=automation.daily_briefing_enabled,
         run_time=automation.daily_briefing_time,
         timezone=settings.BUSINESS_TIMEZONE,
-        next_run_at=_next_run_at(
+        next_run_at=_next_daily_run_at(
+            session,
+            automation=automation,
+            now=current_time,
+        ),
+        last_run=to_public_run(last_run) if last_run is not None else None,
+    )
+
+
+def _next_weekly_schedule(
+    automation: AIAutomationSetting,
+    *,
+    local_now: datetime,
+) -> datetime:
+    days_ahead = (automation.weekly_review_weekday - local_now.weekday()) % 7
+    scheduled_date = local_now.date() + timedelta(days=days_ahead)
+    scheduled_at = datetime.combine(
+        scheduled_date,
+        automation.weekly_review_time,
+        tzinfo=local_now.tzinfo,
+    )
+    if scheduled_at <= local_now:
+        scheduled_at += timedelta(days=7)
+    return scheduled_at
+
+
+def _latest_weekly_due_at(
+    automation: AIAutomationSetting,
+    *,
+    local_now: datetime,
+) -> datetime | None:
+    days_since = (local_now.weekday() - automation.weekly_review_weekday) % 7
+    scheduled_date = local_now.date() - timedelta(days=days_since)
+    scheduled_at = datetime.combine(
+        scheduled_date,
+        automation.weekly_review_time,
+        tzinfo=local_now.tzinfo,
+    )
+    if scheduled_at > local_now or days_since > 2:
+        return None
+    if scheduled_at.astimezone(UTC) < automation.updated_at.astimezone(UTC):
+        return None
+    return scheduled_at
+
+
+def _next_weekly_run_at(
+    session: Session,
+    *,
+    automation: AIAutomationSetting,
+    now: datetime,
+) -> datetime | None:
+    if not automation.weekly_review_enabled:
+        return None
+
+    timezone = ZoneInfo(settings.BUSINESS_TIMEZONE)
+    local_now = now.astimezone(timezone)
+    due_at = _latest_weekly_due_at(automation, local_now=local_now)
+    if due_at is None:
+        return _next_weekly_schedule(
+            automation,
+            local_now=local_now,
+        ).astimezone(UTC)
+    existing_run = _get_scheduled_run(
+        session,
+        user_id=automation.user_id,
+        automation_type="weekly_review",
+        scheduled_for=due_at.date(),
+    )
+    if existing_run is None:
+        return now.astimezone(UTC)
+    return (due_at + timedelta(days=7)).astimezone(UTC)
+
+
+def get_weekly_automation_public(
+    session: Session,
+    *,
+    user_id: uuid.UUID,
+    now: datetime | None = None,
+) -> AIWeeklyAutomationPublic:
+    current_time = now or get_datetime_utc()
+    automation = get_or_create_automation_setting(session, user_id=user_id)
+    last_run = get_latest_automation_run(
+        session,
+        user_id=user_id,
+        automation_type="weekly_review",
+    )
+    return AIWeeklyAutomationPublic(
+        enabled=automation.weekly_review_enabled,
+        weekday=automation.weekly_review_weekday,
+        run_time=automation.weekly_review_time,
+        timezone=settings.BUSINESS_TIMEZONE,
+        next_run_at=_next_weekly_run_at(
             session,
             automation=automation,
             now=current_time,
@@ -168,19 +306,21 @@ def _create_run(
     session: Session,
     *,
     user_id: uuid.UUID,
-    report_date: date,
+    automation_type: AIAutomationType,
+    scheduled_for: date,
     trigger: AIAutomationTrigger,
 ) -> tuple[AIAutomationRun, bool]:
-    run_key = (
-        f"daily:{user_id}:{report_date.isoformat()}"
-        if trigger == "scheduled"
-        else f"manual:{uuid.uuid4()}"
-    )
+    if trigger == "scheduled":
+        prefix = "daily" if automation_type == "daily_briefing" else "weekly"
+        run_key = f"{prefix}:{user_id}:{scheduled_for.isoformat()}"
+    else:
+        run_key = f"manual:{automation_type}:{uuid.uuid4()}"
     run = AIAutomationRun(
         run_key=run_key,
         user_id=user_id,
+        automation_type=automation_type,
         trigger=trigger,
-        scheduled_for=report_date,
+        scheduled_for=scheduled_for,
     )
     session.add(run)
     try:
@@ -222,7 +362,8 @@ def execute_daily_briefing_automation(
     run, created = _create_run(
         session,
         user_id=user_id,
-        report_date=selected_date,
+        automation_type="daily_briefing",
+        scheduled_for=selected_date,
         trigger=trigger,
     )
     if not created:
@@ -261,6 +402,60 @@ def execute_daily_briefing_automation(
     return to_public_run(run)
 
 
+def execute_weekly_review_automation(
+    session: Session,
+    *,
+    user_id: uuid.UUID,
+    ollama: OllamaClient,
+    trigger: AIAutomationTrigger,
+    scheduled_for: date | None = None,
+    end_date: date | None = None,
+) -> AIAutomationRunPublic:
+    selected_schedule_date = resolve_report_date(scheduled_for)
+    selected_end_date = end_date or selected_schedule_date - timedelta(days=1)
+    run, created = _create_run(
+        session,
+        user_id=user_id,
+        automation_type="weekly_review",
+        scheduled_for=selected_schedule_date,
+        trigger=trigger,
+    )
+    if not created:
+        return to_public_run(run)
+
+    source = get_dashboard_trends(session, end_date=selected_end_date, days=7)
+    try:
+        content = generate_weekly_review(ollama, source)
+    except OllamaServiceError:
+        return _finish_failed_run(
+            session,
+            run=run,
+            error="Local AI is unavailable. Check Ollama and the configured model.",
+        )
+    except AIWeeklyReviewResponseError:
+        return _finish_failed_run(
+            session,
+            run=run,
+            error="Local AI returned a weekly review in an invalid format.",
+        )
+
+    review = save_weekly_review(
+        session,
+        content=content,
+        source=source,
+        model=ollama.model,
+        generated_by_id=user_id,
+        generation_mode="automation",
+    )
+    run.status = "succeeded"
+    run.weekly_review_id = review.id
+    run.completed_at = get_datetime_utc()
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+    return to_public_run(run)
+
+
 def run_due_daily_automations(
     session: Session,
     *,
@@ -287,7 +482,8 @@ def run_due_daily_automations(
             _get_scheduled_run(
                 session,
                 user_id=automation.user_id,
-                report_date=local_now.date(),
+                automation_type="daily_briefing",
+                scheduled_for=local_now.date(),
             )
             is not None
         ):
@@ -303,3 +499,62 @@ def run_due_daily_automations(
         )
 
     return due_runs
+
+
+def run_due_weekly_automations(
+    session: Session,
+    *,
+    ollama: OllamaClient,
+    now: datetime | None = None,
+) -> list[AIAutomationRunPublic]:
+    current_time = now or get_datetime_utc()
+    timezone = ZoneInfo(settings.BUSINESS_TIMEZONE)
+    local_now = current_time.astimezone(timezone)
+    due_runs: list[AIAutomationRunPublic] = []
+    automations = session.exec(
+        select(AIAutomationSetting).where(
+            col(AIAutomationSetting.weekly_review_enabled).is_(True)
+        )
+    ).all()
+
+    for automation in automations:
+        user = session.get(User, automation.user_id)
+        if user is None or not user.is_active:
+            continue
+        due_at = _latest_weekly_due_at(automation, local_now=local_now)
+        if due_at is None:
+            continue
+        if (
+            _get_scheduled_run(
+                session,
+                user_id=automation.user_id,
+                automation_type="weekly_review",
+                scheduled_for=due_at.date(),
+            )
+            is not None
+        ):
+            continue
+        due_runs.append(
+            execute_weekly_review_automation(
+                session,
+                user_id=automation.user_id,
+                ollama=ollama,
+                trigger="scheduled",
+                scheduled_for=due_at.date(),
+                end_date=due_at.date() - timedelta(days=1),
+            )
+        )
+
+    return due_runs
+
+
+def run_due_automations(
+    session: Session,
+    *,
+    ollama: OllamaClient,
+    now: datetime | None = None,
+) -> list[AIAutomationRunPublic]:
+    return [
+        *run_due_daily_automations(session, ollama=ollama, now=now),
+        *run_due_weekly_automations(session, ollama=ollama, now=now),
+    ]

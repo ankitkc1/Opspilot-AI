@@ -11,13 +11,18 @@ from app.models import (
     AIDailyBriefingPublic,
     AIDailyBriefingsPublic,
     AIStatusPublic,
+    AIWeeklyAutomationPublic,
+    AIWeeklyAutomationUpdate,
     AIWeeklyReviewPublic,
     AIWeeklyReviewsPublic,
 )
 from app.services.ai_automation import (
     execute_daily_briefing_automation,
+    execute_weekly_review_automation,
     get_daily_automation_public,
+    get_weekly_automation_public,
     update_daily_automation,
+    update_weekly_automation,
 )
 from app.services.ai_briefing import (
     AIBriefingResponseError,
@@ -191,6 +196,57 @@ def run_daily_briefing_automation(
     """Run the approved daily briefing automation immediately."""
 
     return execute_daily_briefing_automation(
+        session,
+        user_id=current_user.id,
+        ollama=ollama,
+        trigger="manual",
+    )
+
+
+@router.get(
+    "/automation/weekly-review",
+    response_model=AIWeeklyAutomationPublic,
+)
+def read_weekly_review_automation(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> AIWeeklyAutomationPublic:
+    """Return the current user's weekly review automation schedule."""
+
+    return get_weekly_automation_public(session, user_id=current_user.id)
+
+
+@router.patch(
+    "/automation/weekly-review",
+    response_model=AIWeeklyAutomationPublic,
+)
+def update_weekly_review_automation(
+    session: SessionDep,
+    current_user: CurrentUser,
+    automation_in: AIWeeklyAutomationUpdate,
+) -> AIWeeklyAutomationPublic:
+    """Enable, disable, or reschedule automatic weekly reviews."""
+
+    update_weekly_automation(
+        session,
+        user_id=current_user.id,
+        automation_in=automation_in,
+    )
+    return get_weekly_automation_public(session, user_id=current_user.id)
+
+
+@router.post(
+    "/automation/weekly-review/run",
+    response_model=AIAutomationRunPublic,
+)
+def run_weekly_review_automation(
+    session: SessionDep,
+    current_user: CurrentUser,
+    ollama: OllamaClientDep,
+) -> AIAutomationRunPublic:
+    """Run the approved weekly review automation immediately."""
+
+    return execute_weekly_review_automation(
         session,
         user_id=current_user.id,
         ollama=ollama,

@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import EmailStr, model_validator
-from sqlalchemy import JSON, CheckConstraint, DateTime, Index, text
+from sqlalchemy import JSON, CheckConstraint, DateTime, Index, SmallInteger, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -534,6 +534,10 @@ class AIWeeklyReviewContent(SQLModel):
 
 class AIWeeklyReview(AIWeeklyReviewContent, table=True):
     __table_args__ = (
+        CheckConstraint(
+            "generation_mode IN ('manual', 'automation')",
+            name="ck_aiweeklyreview_generation_mode",
+        ),
         Index(
             "ix_aiweeklyreview_period_end_generated_at",
             "period_end_date",
@@ -552,6 +556,7 @@ class AIWeeklyReview(AIWeeklyReviewContent, table=True):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     model: str = Field(max_length=100)
+    generation_mode: str = Field(default="manual", max_length=20)
     source: dict[str, object] = Field(sa_type=JSON)
     generated_by_id: uuid.UUID | None = Field(
         default=None,
@@ -567,6 +572,7 @@ class AIWeeklyReviewPublic(AIWeeklyReviewContent):
     period_end_date: date
     generated_at: datetime
     model: str
+    generation_mode: AIGenerationMode
     source: DashboardTrendsPublic
     generated_by_id: uuid.UUID | None
 
@@ -583,9 +589,17 @@ class AIWeeklyReviewsPublic(SQLModel):
 
 AIAutomationTrigger = Literal["manual", "scheduled"]
 AIAutomationRunStatus = Literal["running", "succeeded", "failed"]
+AIAutomationType = Literal["daily_briefing", "weekly_review"]
 
 
 class AIAutomationSetting(SQLModel, table=True):
+    __table_args__ = (
+        CheckConstraint(
+            "weekly_review_weekday BETWEEN 0 AND 6",
+            name="ck_aiautomationsetting_weekday",
+        ),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(
         foreign_key="user.id",
@@ -595,6 +609,14 @@ class AIAutomationSetting(SQLModel, table=True):
     )
     daily_briefing_enabled: bool = False
     daily_briefing_time: time = Field(default=time(hour=8))
+    weekly_review_enabled: bool = False
+    weekly_review_weekday: int = Field(
+        default=0,
+        ge=0,
+        le=6,
+        sa_type=SmallInteger,
+    )
+    weekly_review_time: time = Field(default=time(hour=9))
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
@@ -610,6 +632,12 @@ class AIDailyAutomationUpdate(SQLModel):
     run_time: time | None = None
 
 
+class AIWeeklyAutomationUpdate(SQLModel):
+    enabled: bool | None = None
+    weekday: int | None = Field(default=None, ge=0, le=6)
+    run_time: time | None = None
+
+
 class AIAutomationRun(SQLModel, table=True):
     __table_args__ = (
         CheckConstraint(
@@ -619,6 +647,14 @@ class AIAutomationRun(SQLModel, table=True):
         CheckConstraint(
             "status IN ('running', 'succeeded', 'failed')",
             name="ck_aiautomationrun_status",
+        ),
+        CheckConstraint(
+            "automation_type IN ('daily_briefing', 'weekly_review')",
+            name="ck_aiautomationrun_type",
+        ),
+        CheckConstraint(
+            "NOT (briefing_id IS NOT NULL AND weekly_review_id IS NOT NULL)",
+            name="ck_aiautomationrun_single_result",
         ),
         Index(
             "ix_aiautomationrun_user_started_at",
@@ -634,6 +670,7 @@ class AIAutomationRun(SQLModel, table=True):
         ondelete="CASCADE",
         index=True,
     )
+    automation_type: str = Field(default="daily_briefing", max_length=30)
     trigger: str = Field(max_length=20)
     status: str = Field(default="running", max_length=20)
     scheduled_for: date
@@ -650,22 +687,38 @@ class AIAutomationRun(SQLModel, table=True):
         foreign_key="aidailybriefing.id",
         ondelete="SET NULL",
     )
+    weekly_review_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="aiweeklyreview.id",
+        ondelete="SET NULL",
+    )
     error: str | None = Field(default=None, max_length=1000)
 
 
 class AIAutomationRunPublic(SQLModel):
     id: uuid.UUID
+    automation_type: AIAutomationType
     trigger: AIAutomationTrigger
     status: AIAutomationRunStatus
     scheduled_for: date
     started_at: datetime
     completed_at: datetime | None
     briefing_id: uuid.UUID | None
+    weekly_review_id: uuid.UUID | None
     error: str | None
 
 
 class AIDailyAutomationPublic(SQLModel):
     enabled: bool
+    run_time: time
+    timezone: str
+    next_run_at: datetime | None
+    last_run: AIAutomationRunPublic | None
+
+
+class AIWeeklyAutomationPublic(SQLModel):
+    enabled: bool
+    weekday: int
     run_time: time
     timezone: str
     next_run_at: datetime | None
