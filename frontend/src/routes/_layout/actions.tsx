@@ -22,6 +22,7 @@ import {
   type ActionItemUpdate,
   ActionsService,
   type AIDailyBriefingPublic,
+  type AIWeeklyReviewPublic,
 } from "@/client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -382,42 +383,67 @@ function ActionEditor({
   )
 }
 
-function SourceBriefingDialog({
+type ActionSource =
+  | { kind: "daily"; data: AIDailyBriefingPublic }
+  | { kind: "weekly"; data: AIWeeklyReviewPublic }
+
+function SourceInsightDialog({
   action,
   onOpenChange,
 }: {
   action: ActionItemPublic | null
   onOpenChange: (open: boolean) => void
 }) {
-  const sourceQuery = useQuery<AIDailyBriefingPublic>({
-    queryKey: ["actions", "source-briefing", action?.id],
+  const sourceQuery = useQuery<ActionSource>({
+    queryKey: ["actions", "source", action?.id],
     queryFn: async () => {
       if (!action) throw new Error("No action selected")
-      const response = await ActionsService.readActionSourceBriefing({
-        path: { action_id: action.id },
-      })
-      return response.data
+      if (action.source_weekly_review_id) {
+        const response = await ActionsService.readActionSourceWeeklyReview({
+          path: { action_id: action.id },
+        })
+        return { kind: "weekly", data: response.data }
+      }
+      if (action.source_briefing_id) {
+        const response = await ActionsService.readActionSourceBriefing({
+          path: { action_id: action.id },
+        })
+        return { kind: "daily", data: response.data }
+      }
+      throw new Error("Action has no AI source")
     },
-    enabled: Boolean(action),
+    enabled: Boolean(
+      action?.source_briefing_id || action?.source_weekly_review_id,
+    ),
   })
+  const source = sourceQuery.data
+  const sourceData = source?.data
+  const isWeeklySource = Boolean(action?.source_weekly_review_id)
   const sourceSuggestion = action?.source_suggestion ?? action?.title
-  const sourceCategory = sourceQuery.data
-    ? sourceQuery.data.priorities.includes(sourceSuggestion ?? "")
-      ? "priority"
-      : sourceQuery.data.risks.includes(sourceSuggestion ?? "")
-        ? "risk"
-        : sourceQuery.data.opportunities.includes(sourceSuggestion ?? "")
-          ? "opportunity"
-          : action?.category
-    : action?.category
+  const sourceCategory =
+    source?.kind === "daily"
+      ? source.data.priorities.includes(sourceSuggestion ?? "")
+        ? "priority"
+        : source.data.risks.includes(sourceSuggestion ?? "")
+          ? "risk"
+          : source.data.opportunities.includes(sourceSuggestion ?? "")
+            ? "opportunity"
+            : action?.category
+      : "weekly priority"
+  const sourceLabel =
+    source?.kind === "weekly"
+      ? "Original weekly priority"
+      : `Original ${sourceCategory ?? "priority"} suggestion`
 
   return (
     <Dialog open={Boolean(action)} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Source briefing</DialogTitle>
+          <DialogTitle>
+            {isWeeklySource ? "Source weekly review" : "Source daily briefing"}
+          </DialogTitle>
           <DialogDescription>
-            The saved AI briefing that produced this approved action.
+            The saved AI insight that produced this approved action.
           </DialogDescription>
         </DialogHeader>
 
@@ -429,7 +455,7 @@ function SourceBriefingDialog({
               {getErrorMessage(sourceQuery.error)}
             </AlertDescription>
           </Alert>
-        ) : sourceQuery.isPending || !sourceQuery.data ? (
+        ) : sourceQuery.isPending || !sourceData ? (
           <div className="space-y-3 py-4" role="status">
             <Skeleton className="h-6 w-2/3" />
             <Skeleton className="h-20 w-full" />
@@ -439,24 +465,28 @@ function SourceBriefingDialog({
           <div className="space-y-5 py-2">
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">
-                {formatDate(sourceQuery.data.report_date)}
+                {source?.kind === "weekly"
+                  ? `${formatDate(source.data.period_start_date)} – ${formatDate(source.data.period_end_date)}`
+                  : source?.kind === "daily"
+                    ? formatDate(source.data.report_date)
+                    : ""}
               </Badge>
-              <Badge variant="outline">{sourceQuery.data.model}</Badge>
+              <Badge variant="outline">{sourceData.model}</Badge>
             </div>
             <div>
-              <h3 className="font-semibold">{sourceQuery.data.headline}</h3>
+              <h3 className="font-semibold">{sourceData.headline}</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {sourceQuery.data.summary}
+                {sourceData.summary}
               </p>
             </div>
             <div className="rounded-lg border bg-muted/40 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Original {sourceCategory ?? "priority"} suggestion
+                {sourceLabel}
               </p>
               <p className="mt-2 text-sm font-medium">{sourceSuggestion}</p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Generated {formatDateTime(sourceQuery.data.generated_at)}
+              Generated {formatDateTime(sourceData.generated_at)}
             </p>
           </div>
         )}
@@ -698,8 +728,8 @@ function Actions() {
               </div>
               <p className="font-medium">No matching actions</p>
               <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                Create an action here or approve a suggestion from the daily AI
-                briefing.
+                Create an action here or approve a suggestion from an AI daily
+                briefing or weekly review.
               </p>
             </div>
           ) : (
@@ -790,7 +820,8 @@ function Actions() {
                           {isOverdue ? "Overdue · " : ""}
                           {formatDate(action.due_date)}
                         </div>
-                        {action.source_briefing_id ? (
+                        {action.source_briefing_id ||
+                        action.source_weekly_review_id ? (
                           <Button
                             className="h-auto px-1 py-0 text-xs"
                             size="sm"
@@ -841,7 +872,7 @@ function Actions() {
           if (!nextOpen) setEditingAction(null)
         }}
       />
-      <SourceBriefingDialog
+      <SourceInsightDialog
         action={sourceAction}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setSourceAction(null)

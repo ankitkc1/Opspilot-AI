@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.models import ActionItem, AIDailyBriefing
+from app.models import ActionItem, AIDailyBriefing, AIWeeklyReview
 
 
 def _action_payload(**overrides: object) -> dict[str, object]:
@@ -48,6 +48,53 @@ def _create_briefing(db: Session) -> AIDailyBriefing:
     return briefing
 
 
+def _create_weekly_review(db: Session) -> AIWeeklyReview:
+    review = AIWeeklyReview(
+        headline="Build consistency next week",
+        summary="The selected week had limited recorded sales activity.",
+        wins=[],
+        concerns=["Sales activity was limited."],
+        priorities=["Confirm sales are recorded at the end of each day."],
+        period_start_date=date(2099, 3, 1),
+        period_end_date=date(2099, 3, 7),
+        model="qwen3:4b",
+        source={
+            "start_date": "2099-03-01",
+            "end_date": "2099-03-07",
+            "timezone": "Australia/Sydney",
+            "days": 7,
+            "revenue": "0.00",
+            "sales_count": 0,
+            "units_sold": "0.000",
+            "average_sale_value": "0.00",
+            "previous_period": {
+                "start_date": "2099-02-22",
+                "end_date": "2099-02-28",
+                "revenue": "0.00",
+                "sales_count": 0,
+                "units_sold": "0.000",
+                "revenue_change_percent": "0.00",
+                "sales_count_change_percent": "0.00",
+                "units_sold_change_percent": "0.00",
+            },
+            "daily": [
+                {
+                    "report_date": f"2099-03-0{day}",
+                    "revenue": "0.00",
+                    "sales_count": 0,
+                    "units_sold": "0.000",
+                    "average_sale_value": "0.00",
+                }
+                for day in range(1, 8)
+            ],
+        },
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+    return review
+
+
 @pytest.mark.parametrize(
     ("method", "path", "payload"),
     [
@@ -55,6 +102,7 @@ def _create_briefing(db: Session) -> AIDailyBriefing:
         ("GET", "/", None),
         ("GET", f"/{uuid.UUID(int=1)}", None),
         ("GET", f"/{uuid.UUID(int=1)}/source-briefing", None),
+        ("GET", f"/{uuid.UUID(int=1)}/source-weekly-review", None),
         ("PATCH", f"/{uuid.UUID(int=1)}", {"status": "completed"}),
         ("DELETE", f"/{uuid.UUID(int=1)}", None),
     ],
@@ -102,6 +150,49 @@ def test_create_action_links_saved_briefing(
     assert stored.created_by_id == uuid.UUID(content["created_by_id"])
 
 
+def test_create_action_links_saved_weekly_review_and_returns_source(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    review = _create_weekly_review(db)
+    priority = "Confirm sales are recorded at the end of each day."
+    response = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(
+            title=priority,
+            priority="medium",
+            source_weekly_review_id=str(review.id),
+            source_suggestion=priority,
+        ),
+    )
+
+    assert response.status_code == 201
+    content = response.json()
+    assert content["source_briefing_id"] is None
+    assert content["source_weekly_review_id"] == str(review.id)
+    assert content["source_suggestion"] == priority
+
+    filtered = client.get(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        params={"source_weekly_review_id": str(review.id)},
+    )
+    assert filtered.status_code == 200
+    assert filtered.json()["count"] == 1
+    assert filtered.json()["data"][0]["id"] == content["id"]
+
+    source = client.get(
+        f"{settings.API_V1_STR}/actions/{content['id']}/source-weekly-review",
+        headers=superuser_token_headers,
+    )
+    assert source.status_code == 200
+    assert source.json()["id"] == str(review.id)
+    assert source.json()["headline"] == "Build consistency next week"
+    assert source.json()["source"]["days"] == 7
+
+
 def test_create_action_rejects_missing_source_briefing(
     client: TestClient,
     superuser_token_headers: dict[str, str],
@@ -119,11 +210,34 @@ def test_create_action_rejects_missing_source_briefing(
     assert response.json()["detail"] == "Source briefing not found"
 
 
+def test_create_action_rejects_missing_source_weekly_review(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(
+            source_weekly_review_id=str(uuid.uuid4()),
+            source_suggestion="Review the low-stock list",
+        ),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Source weekly review not found"
+
+
 @pytest.mark.parametrize(
     "source",
     [
         {"source_briefing_id": str(uuid.uuid4())},
+        {"source_weekly_review_id": str(uuid.uuid4())},
         {"source_suggestion": "Review the low-stock list"},
+        {
+            "source_briefing_id": str(uuid.uuid4()),
+            "source_weekly_review_id": str(uuid.uuid4()),
+            "source_suggestion": "Review the low-stock list",
+        },
     ],
 )
 def test_create_action_requires_complete_source_reference(
@@ -168,6 +282,65 @@ def test_create_action_rejects_duplicate_briefing_suggestion(
     payload = _action_payload(
         source_briefing_id=str(briefing.id),
         source_suggestion="Review the low-stock list",
+    )
+
+    first = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=payload,
+    )
+    duplicate = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=payload,
+    )
+
+    assert first.status_code == 201
+    assert duplicate.status_code == 409
+    assert "already in the Action Center" in duplicate.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    ("category", "suggestion"),
+    [
+        ("risk", "Confirm sales are recorded at the end of each day."),
+        ("priority", "Invent a priority that is not in the review."),
+    ],
+)
+def test_create_action_rejects_invalid_weekly_review_priority(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    category: str,
+    suggestion: str,
+) -> None:
+    review = _create_weekly_review(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(
+            title=suggestion,
+            category=category,
+            source_weekly_review_id=str(review.id),
+            source_suggestion=suggestion,
+        ),
+    )
+
+    assert response.status_code == 422
+    assert "not present" in response.json()["detail"]
+
+
+def test_create_action_rejects_duplicate_weekly_review_priority(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    review = _create_weekly_review(db)
+    priority = "Confirm sales are recorded at the end of each day."
+    payload = _action_payload(
+        title=priority,
+        source_weekly_review_id=str(review.id),
+        source_suggestion=priority,
     )
 
     first = client.post(
@@ -425,6 +598,45 @@ def test_action_source_briefing_is_owner_scoped_and_requires_source(
     assert other_user.status_code == 404
     assert no_source.status_code == 404
     assert no_source.json()["detail"] == "Action has no source briefing"
+
+
+def test_action_source_weekly_review_is_owner_scoped_and_requires_source(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    review = _create_weekly_review(db)
+    priority = "Confirm sales are recorded at the end of each day."
+    linked = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(
+            title=priority,
+            source_weekly_review_id=str(review.id),
+            source_suggestion=priority,
+        ),
+    )
+    manual = client.post(
+        f"{settings.API_V1_STR}/actions/",
+        headers=superuser_token_headers,
+        json=_action_payload(title="Prepare the weekly roster"),
+    )
+
+    other_user = client.get(
+        f"{settings.API_V1_STR}/actions/"
+        f"{linked.json()['id']}/source-weekly-review",
+        headers=normal_user_token_headers,
+    )
+    no_source = client.get(
+        f"{settings.API_V1_STR}/actions/"
+        f"{manual.json()['id']}/source-weekly-review",
+        headers=superuser_token_headers,
+    )
+
+    assert other_user.status_code == 404
+    assert no_source.status_code == 404
+    assert no_source.json()["detail"] == "Action has no source weekly review"
 
 
 @pytest.mark.parametrize("field", ["title", "category", "priority", "status"])

@@ -7,10 +7,12 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   CalendarDays,
+  CircleCheck,
   CircleDollarSign,
   ListChecks,
   LoaderCircle,
   Minus,
+  Plus,
   ReceiptText,
   RefreshCw,
   ShieldAlert,
@@ -23,6 +25,8 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import {
+  type ActionItemCreate,
+  ActionsService,
   type AIWeeklyReviewPublic,
   AiService,
   DashboardService,
@@ -262,12 +266,18 @@ function WeeklyReviewList({
   icon: Icon,
   iconClassName,
   items,
+  isAdded,
+  isCreating,
+  onCreateAction,
   title,
 }: {
   emptyMessage: string
   icon: LucideIcon
   iconClassName: string
   items: string[]
+  isAdded?: (item: string) => boolean
+  isCreating?: (item: string) => boolean
+  onCreateAction?: (item: string) => void
   title: string
 }) {
   return (
@@ -279,11 +289,29 @@ function WeeklyReviewList({
       {items.length > 0 ? (
         <ul className="space-y-2 text-sm text-muted-foreground">
           {items.map((item) => (
-            <li className="flex gap-2" key={item}>
+            <li className="flex items-start gap-2" key={item}>
               <span aria-hidden="true" className="mt-0.5 text-foreground/50">
                 •
               </span>
-              <span>{item}</span>
+              <span className="min-w-0 flex-1">{item}</span>
+              {onCreateAction ? (
+                <Button
+                  className="shrink-0"
+                  disabled={isAdded?.(item) || isCreating?.(item)}
+                  onClick={() => onCreateAction(item)}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isCreating?.(item) ? (
+                    <LoaderCircle className="animate-spin" />
+                  ) : isAdded?.(item) ? (
+                    <CircleCheck />
+                  ) : (
+                    <Plus />
+                  )}
+                  {isAdded?.(item) ? "Added" : "Add"}
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -295,20 +323,26 @@ function WeeklyReviewList({
 }
 
 function WeeklyReview({
+  addedPriorities,
   canGenerate,
+  creatingAction,
   error,
   isGenerating,
   isLoading,
   isStale,
   onGenerate,
+  onCreatePriority,
   review,
 }: {
+  addedPriorities: Set<string>
   canGenerate: boolean
+  creatingAction?: ActionItemCreate
   error: unknown
   isGenerating: boolean
   isLoading: boolean
   isStale: boolean
   onGenerate: () => void
+  onCreatePriority: (priority: string) => void
   review?: AIWeeklyReviewPublic
 }) {
   return (
@@ -432,6 +466,9 @@ function WeeklyReview({
                 icon={ListChecks}
                 iconClassName="text-sky-600 dark:text-sky-400"
                 items={review.priorities}
+                isAdded={(item) => addedPriorities.has(item)}
+                isCreating={(item) => creatingAction?.title === item}
+                onCreateAction={onCreatePriority}
                 title="Next-week priorities"
               />
             </div>
@@ -524,6 +561,44 @@ function Trends() {
     days === 7
       ? (generatedReview ?? latestReviewQuery.data ?? undefined)
       : undefined
+  const reviewActionsQuery = useQuery({
+    queryKey: ["actions", "weekly-review", review?.id],
+    queryFn: async () => {
+      if (!review) return []
+      const response = await ActionsService.readActions({
+        query: {
+          source_weekly_review_id: review.id,
+          skip: 0,
+          limit: 100,
+        },
+      })
+      return response.data.data
+    },
+    enabled: Boolean(review),
+  })
+  const createActionMutation = useMutation({
+    mutationFn: async (payload: ActionItemCreate) => {
+      const response = await ActionsService.createAction({ body: payload })
+      return response.data
+    },
+    onSuccess: async (action) => {
+      await queryClient.invalidateQueries({ queryKey: ["actions"] })
+      toast.success("Added to Action Center", {
+        description: action.title,
+      })
+    },
+    onError: (error) => {
+      const isDuplicate = isAxiosError(error) && error.response?.status === 409
+      toast.error(isDuplicate ? "Action already added" : "Action not created", {
+        description: getWeeklyReviewError(error),
+      })
+    },
+  })
+  const addedPriorities = new Set(
+    (reviewActionsQuery.data ?? []).map(
+      (action) => action.source_suggestion ?? action.title,
+    ),
+  )
   const isReviewStale = Boolean(
     review && data && JSON.stringify(review.source) !== JSON.stringify(data),
   )
@@ -667,12 +742,28 @@ function Trends() {
           </section>
 
           <WeeklyReview
+            addedPriorities={addedPriorities}
             canGenerate={days === 7}
+            creatingAction={
+              createActionMutation.isPending
+                ? createActionMutation.variables
+                : undefined
+            }
             error={reviewMutation.error ?? latestReviewQuery.error}
             isGenerating={reviewMutation.isPending}
             isLoading={latestReviewQuery.isPending && days === 7}
             isStale={isReviewStale}
             onGenerate={() => reviewMutation.mutate()}
+            onCreatePriority={(priority) => {
+              if (!review) return
+              createActionMutation.mutate({
+                title: priority,
+                category: "priority",
+                priority: "medium",
+                source_weekly_review_id: review.id,
+                source_suggestion: priority,
+              })
+            }}
             review={review}
           />
 

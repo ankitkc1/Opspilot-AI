@@ -185,6 +185,10 @@ export type ActionItemCreate = {
      */
     source_briefing_id?: string | null;
     /**
+     * Source Weekly Review Id
+     */
+    source_weekly_review_id?: string | null;
+    /**
      * Source Suggestion
      */
     source_suggestion?: string | null;
@@ -226,6 +230,10 @@ export type ActionItemPublic = {
      * Source Briefing Id
      */
     source_briefing_id: string | null;
+    /**
+     * Source Weekly Review Id
+     */
+    source_weekly_review_id: string | null;
     /**
      * Source Suggestion
      */
@@ -1537,6 +1545,10 @@ export type actionsReadActionsData = {
          */
         source_briefing_id?: string | null;
         /**
+         * Source Weekly Review Id
+         */
+        source_weekly_review_id?: string | null;
+        /**
          * Skip
          */
         skip?: number;
@@ -1710,6 +1722,36 @@ export type actionsReadActionSourceBriefingResponses = {
 };
 
 export type actionsReadActionSourceBriefingResponse = actionsReadActionSourceBriefingResponses[keyof actionsReadActionSourceBriefingResponses];
+
+export type actionsReadActionSourceWeeklyReviewData = {
+    body?: never;
+    path: {
+        /**
+         * Action Id
+         */
+        action_id: string;
+    };
+    query?: never;
+    url: '/api/v1/actions/{action_id}/source-weekly-review';
+};
+
+export type actionsReadActionSourceWeeklyReviewErrors = {
+    /**
+     * Validation Error
+     */
+    422: HTTPValidationError;
+};
+
+export type actionsReadActionSourceWeeklyReviewError = actionsReadActionSourceWeeklyReviewErrors[keyof actionsReadActionSourceWeeklyReviewErrors];
+
+export type actionsReadActionSourceWeeklyReviewResponses = {
+    /**
+     * Successful Response
+     */
+    200: AIWeeklyReviewPublic;
+};
+
+export type actionsReadActionSourceWeeklyReviewResponse = actionsReadActionSourceWeeklyReviewResponses[keyof actionsReadActionSourceWeeklyReviewResponses];
 
 export type aiReadAiStatusData = {
     body?: never;

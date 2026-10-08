@@ -15,6 +15,8 @@ from app.models import (
     ActionStatus,
     AIDailyBriefing,
     AIDailyBriefingPublic,
+    AIWeeklyReview,
+    AIWeeklyReviewPublic,
     get_datetime_utc,
 )
 
@@ -41,6 +43,7 @@ def create_action(
 ) -> ActionItem:
     """Create a user-approved operational action."""
 
+    source_filter: bool | None = None
     if action_in.source_briefing_id is not None:
         briefing = session.get(AIDailyBriefing, action_in.source_briefing_id)
         if briefing is None:
@@ -57,9 +60,41 @@ def create_action(
                 detail="Source suggestion is not present in that briefing category",
             )
 
+        source_filter = (
+            ActionItem.source_briefing_id == action_in.source_briefing_id
+        )
+    elif action_in.source_weekly_review_id is not None:
+        weekly_review = session.get(
+            AIWeeklyReview,
+            action_in.source_weekly_review_id,
+        )
+        if weekly_review is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Source weekly review not found",
+            )
+
+        if (
+            action_in.category != "priority"
+            or action_in.source_suggestion not in weekly_review.priorities
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Source suggestion is not present in that weekly review's "
+                    "priorities"
+                ),
+            )
+
+        source_filter = (
+            ActionItem.source_weekly_review_id
+            == action_in.source_weekly_review_id
+        )
+
+    if source_filter is not None:
         duplicate_filters = (
             ActionItem.created_by_id == current_user.id,
-            ActionItem.source_briefing_id == action_in.source_briefing_id,
+            source_filter,
             ActionItem.category == action_in.category,
         )
         duplicate = session.exec(
@@ -79,7 +114,7 @@ def create_action(
         if duplicate is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="This briefing suggestion is already in the Action Center",
+                detail="This AI suggestion is already in the Action Center",
             )
 
     action = ActionItem.model_validate(
@@ -93,7 +128,7 @@ def create_action(
         session.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This briefing suggestion is already in the Action Center",
+            detail="This AI suggestion is already in the Action Center",
         ) from error
     session.refresh(action)
     return action
@@ -106,6 +141,7 @@ def read_actions(
     action_status: ActionStatus | None = Query(default=None, alias="status"),
     category: ActionCategory | None = None,
     source_briefing_id: uuid.UUID | None = None,
+    source_weekly_review_id: uuid.UUID | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=100),
 ) -> ActionItemsPublic:
@@ -118,6 +154,10 @@ def read_actions(
         filters.append(ActionItem.category == category)
     if source_briefing_id is not None:
         filters.append(ActionItem.source_briefing_id == source_briefing_id)
+    if source_weekly_review_id is not None:
+        filters.append(
+            ActionItem.source_weekly_review_id == source_weekly_review_id
+        )
 
     count = session.exec(
         select(func.count()).select_from(ActionItem).where(*filters)
@@ -165,6 +205,30 @@ def read_action_source_briefing(
     if briefing is None:
         raise HTTPException(status_code=404, detail="Source briefing not found")
     return briefing
+
+
+@router.get(
+    "/{action_id}/source-weekly-review",
+    response_model=AIWeeklyReviewPublic,
+)
+def read_action_source_weekly_review(
+    session: SessionDep,
+    current_user: CurrentUser,
+    action_id: uuid.UUID,
+) -> AIWeeklyReview:
+    """Read the saved weekly review that produced an owned action."""
+
+    action = _get_owned_action(session, current_user, action_id)
+    if action.source_weekly_review_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Action has no source weekly review",
+        )
+
+    weekly_review = session.get(AIWeeklyReview, action.source_weekly_review_id)
+    if weekly_review is None:
+        raise HTTPException(status_code=404, detail="Source weekly review not found")
+    return weekly_review
 
 
 @router.patch("/{action_id}", response_model=ActionItemPublic)

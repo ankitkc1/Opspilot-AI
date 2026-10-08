@@ -587,15 +587,26 @@ class ActionItemContent(SQLModel):
 
 class ActionItemCreate(ActionItemContent):
     source_briefing_id: uuid.UUID | None = None
+    source_weekly_review_id: uuid.UUID | None = None
     source_suggestion: str | None = Field(default=None, min_length=1, max_length=255)
 
     @model_validator(mode="after")
     def validate_source_reference(self) -> Self:
-        has_briefing = self.source_briefing_id is not None
+        source_count = sum(
+            source_id is not None
+            for source_id in (
+                self.source_briefing_id,
+                self.source_weekly_review_id,
+            )
+        )
+        if source_count > 1:
+            raise ValueError("only one AI source may be provided")
+
+        has_source = source_count == 1
         has_suggestion = self.source_suggestion is not None
-        if has_briefing != has_suggestion:
+        if has_source != has_suggestion:
             raise ValueError(
-                "source_briefing_id and source_suggestion must be provided together"
+                "an AI source and source_suggestion must be provided together"
             )
         return self
 
@@ -630,6 +641,11 @@ class ActionItem(SQLModel, table=True):
             "status IN ('open', 'in_progress', 'completed', 'dismissed')",
             name="ck_actionitem_status",
         ),
+        CheckConstraint(
+            "NOT (source_briefing_id IS NOT NULL "
+            "AND source_weekly_review_id IS NOT NULL)",
+            name="ck_actionitem_single_ai_source",
+        ),
         Index(
             "ix_actionitem_owner_status_created",
             "created_by_id",
@@ -647,6 +663,18 @@ class ActionItem(SQLModel, table=True):
                 "source_briefing_id IS NOT NULL AND source_suggestion IS NOT NULL"
             ),
         ),
+        Index(
+            "uq_actionitem_owner_weekly_source_suggestion",
+            "created_by_id",
+            "source_weekly_review_id",
+            "category",
+            "source_suggestion",
+            unique=True,
+            postgresql_where=text(
+                "source_weekly_review_id IS NOT NULL "
+                "AND source_suggestion IS NOT NULL"
+            ),
+        ),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -659,6 +687,12 @@ class ActionItem(SQLModel, table=True):
     source_briefing_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="aidailybriefing.id",
+        ondelete="SET NULL",
+        index=True,
+    )
+    source_weekly_review_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="aiweeklyreview.id",
         ondelete="SET NULL",
         index=True,
     )
@@ -688,6 +722,7 @@ class ActionItemPublic(ActionItemContent):
     id: uuid.UUID
     status: ActionStatus
     source_briefing_id: uuid.UUID | None
+    source_weekly_review_id: uuid.UUID | None
     source_suggestion: str | None
     created_by_id: uuid.UUID
     created_at: datetime
